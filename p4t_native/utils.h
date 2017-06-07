@@ -1,6 +1,7 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#include "rule.h"
 #include "filter.h"
 
 namespace p4t {
@@ -15,30 +16,27 @@ inline auto svmr2filters(py::object const& svmr) {
     return filters;
 }
 
-inline auto svmr2actions(py::object const& svmr) {
-    vector<int> actions{};
+inline auto svmr2rules(py::object const& svmr) {
+    vector<Rule> rules{};
     for (auto i = 0; i < len(svmr); i++) {
+        Action action;
         if (svmr[i].attr("action") == py::object()) {
-            actions.emplace_back(-1);
+            action = Action::nop();
         } else {
-            actions.emplace_back(py::extract<int>(svmr[i].attr("action")));
+            action = Action{py::extract<int>(svmr[i].attr("action"))};
         }
+        rules.emplace_back(Filter(svmr[i]), action);
     }
-    return actions;
+    return rules;
 }
 
-inline auto filters_n_actions2svmr(
-        vector<Filter> const& filters, 
-        vector<int> const& actions
-        ) {
-    assert(filters.size() == actions.size());
-
+inline auto rules2svmr(vector<Rule> const& rules) {
     py::list result{};
-    for (auto i = 0; i < int(filters.size()); i++) {
+    for (auto i = 0; i < int(rules.size()); i++) {
         py::list mask{};
         py::list value{};
-        for (auto j = 0; j < int(filters[i].size()); j++) {
-            switch(filters[i][j]) {
+        for (auto j = 0; j < int(rules[i].filter().size()); j++) {
+            switch(rules[i].filter()[j]) {
                 case Bit::ANY: {
                     mask.append(false);
                     value.append(false);
@@ -53,7 +51,8 @@ inline auto filters_n_actions2svmr(
                 } break;
             }
         }
-        auto const action = actions[i] >= 0 ? py::object(actions[i]) : py::object();
+        auto const action = rules[i].action() != Action::nop() ? 
+            py::object(rules[i].action().code()) : py::object();
         result.append(py::make_tuple(value, mask, action));
     }
     return result;

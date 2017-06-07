@@ -4,7 +4,9 @@
 #include "filter.h"
 
 namespace p4t {
-    void perform_boolean_minimization(vector<Filter> * filters, vector<int> * actions);
+    auto perform_boolean_minimization(
+            vector<Filter> filters, vector<int> actions, bool is_default_nop) 
+        -> pair<vector<Filter>, vector<int>>;
 }
 
 #endif

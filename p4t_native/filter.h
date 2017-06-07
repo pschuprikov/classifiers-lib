@@ -33,10 +33,25 @@ public:
 
     auto size() const {
         return width_;
-    }
-
+    } 
     auto operator[](size_t i) const -> Bit {
         return mask_.get(i) ? (value_.get(i) ? Bit::ONE : Bit::ZERO) : Bit::ANY;
+    }
+
+    void set(size_t i, Bit value) {
+        switch(value) {
+            case Bit::ANY: {
+                mask_.set(i, false);
+            } break;
+            case Bit::ONE: {
+                mask_.set(i, true);
+                value_.set(i, true);
+            } break;
+            case Bit::ZERO: {
+                mask_.set(i, true);
+                value_.set(i, true);
+            } break;
+        }
     }
 
     auto has_any(BitArray const& mask) const -> bool {
@@ -52,9 +67,17 @@ public:
             Filter const& f1, Filter const& f2, BitArray const& mask)
         -> pair<bool, int>;
 
+    static auto fast_blocker(
+            Filter const& f1, Filter const& f2)
+        -> pair<bool, int>;
+
+
     static auto intersect(
             Filter const& lhs, Filter const& rhs, BitArray const& mask) 
         -> bool;
+
+    static auto intersect(Filter const& lhs, Filter const& rhs) -> bool;
+    static auto subsums(Filter const& lhs, Filter const& rhs) -> bool;
 
 private:
     BitArray value_;
@@ -87,6 +110,29 @@ auto inline p4t::Filter::fast_blocker(
     return {true, first_difference};
 }
 
+// TODO: deduplicate
+auto inline p4t::Filter::fast_blocker(
+        Filter const& f1, Filter const& f2) -> pair<bool, int> {
+
+    auto first_difference = -1;
+    for (auto i = 0u; i < BitArray::NUM_CHUNKS; i++) {
+        auto const diff = 
+            (f1.value_.chunk(i) ^ f2.value_.chunk(i)) 
+            & (f1.mask_.chunk(i) & f2.mask_.chunk(i));
+        if (diff) {
+            if (first_difference != -1) {
+                return {false, first_difference};
+            }
+            auto const idx = __builtin_ctz(diff);
+            first_difference = i * BitArray::BITS_PER_CHUNK + idx;
+            if (diff & ~(1 << idx)) {
+                return {false, first_difference};
+            }
+        }
+    }
+    return {true, first_difference};
+}
+
 auto inline p4t::Filter::intersect(
         Filter const& lhs, Filter const& rhs, BitArray const& mask) -> bool {
 
@@ -95,6 +141,34 @@ auto inline p4t::Filter::intersect(
     for (auto i = 0u; i < BitArray::NUM_CHUNKS; i++) {
         if ((lhs.value_.chunk(i) ^ rhs.value_.chunk(i)) 
                 & (mask.chunk(i) & lhs.mask_.chunk(i) & rhs.mask_.chunk(i))) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+// TODO: deduplicate
+auto inline p4t::Filter::intersect(Filter const& lhs, Filter const& rhs) -> bool {
+
+    assert(lhs.size() == rhs.size());
+
+    for (auto i = 0u; i < BitArray::NUM_CHUNKS; i++) {
+        if ((lhs.value_.chunk(i) ^ rhs.value_.chunk(i)) 
+                & (lhs.mask_.chunk(i) & rhs.mask_.chunk(i))) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+auto inline p4t::Filter::subsums(Filter const& lhs, Filter const& rhs) -> bool {
+    assert(lhs.size() == rhs.size());
+
+    for (auto i = 0u; i < BitArray::NUM_CHUNKS; i++) {
+        if (((lhs.value_.chunk(i) ^ rhs.value_.chunk(i)) | ~rhs.mask_.chunk(i)) 
+                & lhs.mask_.chunk(i)) {
             return false;
         }
     }

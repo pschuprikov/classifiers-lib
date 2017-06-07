@@ -107,6 +107,12 @@ def icnp(line):
          _maybe_exact_to_filter(x1, 4) + _maybe_exact_to_filter(x2, 4)
          ]
 
+@classifier_format(32, 32)
+def classbench_ips(line):
+    src_ip, dst_ip, *_ = line[1:].split('\t')
+    return [_ip_to_filter(src_ip) + _ip_to_filter(dst_ip)]
+
+
 
 @classifier_format(32, 32, 8, 16)
 def classbench(line):

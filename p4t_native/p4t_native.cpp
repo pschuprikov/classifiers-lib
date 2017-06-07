@@ -72,7 +72,6 @@ auto svmrs2supports(py::object svmrs) {
 }
 
 } // namespace 
-
 auto p4t::min_pmgr(py::object svmr) -> py::object {
     if (py::len(svmr) == 0) {
         return py::object();
@@ -173,27 +172,47 @@ auto p4t::split(py::object classifier, int capacity) -> py::object {
     auto const filters = svmr2filters(classifier);
     auto const actions = svmr2actions(classifier);
 
+    assert(filters.size() == actions.size());
     
-    
-    if (int(filters.size()) < capacity) {
+    if (int(filters.size()) <= capacity) {
         return py::make_tuple(
             filters_n_actions2svmr(filters, actions),
-            py::object());
+            filters_n_actions2svmr({}, {}));
     }
 
     auto best_value = -1.0;
+
     vector<Filter> best_filters_here{}; 
     vector<int> best_actions_here{};
     vector<Filter> best_filters_there{};
     vector<int> best_actions_there{};
 
-    for (auto i = 0; i <= int(filters.size()); i++) {
-        for (auto j = i; j <= int(filters.size()); j++) {
+    auto first_non_nop = -1;
+    for (auto i = 0; i < int(filters.size()); i++) {
+        if (actions[i] != -1) {
+            first_non_nop = i;
+            break;
+        }
+    }
+
+
+    for (auto i = 0; i <= std::min(first_non_nop, int(filters.size())); i++) {
+        if (actions[i] == -1) {
+            continue;
+        }
+        if (i > 0 && actions[i] == -1 && actions[i - 1] != -1) {
+            break;
+        }
+        for (auto j = i + capacity / 2; j <= std::min(i + capacity, int(filters.size())); j++) {
+            if (actions[j - 1] == -1) {
+                continue;
+            }
             vector<Filter> filters_here(begin(filters), begin(filters) + j);
-            vector<int> actions_here(begin(actions), end(actions) + j);
+            vector<int> actions_here(begin(actions), begin(actions) + j);
 
             std::fill(begin(actions_here), begin(actions_here) + i, -1);
-            perform_boolean_minimization(&filters_here, &actions_here);
+            std::tie(filters_here, actions_here) = 
+                perform_boolean_minimization(filters_here, actions_here, true);
 
             if (int(filters_here.size()) > capacity) {
                 continue;
@@ -203,7 +222,8 @@ auto p4t::split(py::object classifier, int capacity) -> py::object {
             vector<int> actions_there = actions;
             
             std::fill(begin(actions_there) + i, begin(actions_there) + j, -1);
-            perform_boolean_minimization(&filters_there, &actions_there);
+            std::tie(filters_there, actions_there) =
+                perform_boolean_minimization(filters_there, actions_there, true);
 
             if (best_value < 0 || filters_there.size() == 0 
                     ||  double(j - i) / filters_there.size() > best_value) {
@@ -211,13 +231,27 @@ auto p4t::split(py::object classifier, int capacity) -> py::object {
                 best_actions_here = actions_here;
                 best_filters_there = filters_there;
                 best_actions_there = actions_there;
+
+                if (filters_there.size() == 0) {
+                    return py::make_tuple(
+                        filters_n_actions2svmr(best_filters_here, best_actions_here),
+                        filters_n_actions2svmr(best_filters_there, best_actions_there));
+                }
+
+                best_value = double(j - i) / filters_there.size();
             }
         }
     }
 
-    return py::make_tuple(
+    if (best_value < 0) {
+        return py::make_tuple(
+            py::object(), filters_n_actions2svmr(filters, actions)
+            );
+    } else {
+        return py::make_tuple(
             filters_n_actions2svmr(best_filters_here, best_actions_here),
             filters_n_actions2svmr(best_filters_there, best_actions_there));
+    }
 }
 
 

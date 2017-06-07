@@ -53,7 +53,8 @@ inline auto filters_n_actions2svmr(
                 } break;
             }
         }
-        result.append(py::make_tuple(value, mask, actions[i]));
+        auto const action = actions[i] >= 0 ? py::object(actions[i]) : py::object();
+        result.append(py::make_tuple(value, mask, action));
     }
     return result;
 }

@@ -169,88 +169,71 @@ void p4t::pylog(string msg) {
 }
 
 auto p4t::split(py::object classifier, int capacity) -> py::object {
-    auto const filters = svmr2filters(classifier);
-    auto const actions = svmr2actions(classifier);
+    auto const rules = svmr2rules(classifier);
 
-    assert(filters.size() == actions.size());
-    
-    if (int(filters.size()) <= capacity) {
-        return py::make_tuple(
-            filters_n_actions2svmr(filters, actions),
-            filters_n_actions2svmr({}, {}));
+    if (int(rules.size()) <= capacity) {
+        return py::make_tuple(rules2svmr(rules), rules2svmr({}));
     }
 
     auto best_value = -1.0;
 
-    vector<Filter> best_filters_here{}; 
-    vector<int> best_actions_here{};
-    vector<Filter> best_filters_there{};
-    vector<int> best_actions_there{};
+    vector<Rule> best_rules_here{};
+    vector<Rule> best_rules_there{};
 
     auto first_non_nop = -1;
-    for (auto i = 0; i < int(filters.size()); i++) {
-        if (actions[i] != -1) {
+    for (auto i = 0; i < int(rules.size()); i++) {
+        if (rules[i].action() != Action::nop()) {
             first_non_nop = i;
             break;
         }
     }
 
 
-    for (auto i = 0; i <= std::min(first_non_nop, int(filters.size())); i++) {
-        if (actions[i] == -1) {
+    for (auto i = 0; i <= std::min(first_non_nop, int(rules.size())); i++) {
+        if (rules[i].action() == Action::nop()) {
             continue;
         }
-        if (i > 0 && actions[i] == -1 && actions[i - 1] != -1) {
+        if (i > 0 && rules[i].action() == Action::nop() && rules[i - 1].action() == Action::nop()) {
             break;
         }
-        for (auto j = i + capacity / 2; j <= std::min(i + capacity, int(filters.size())); j++) {
-            if (actions[j - 1] == -1) {
+        for (auto j = i + capacity / 2; j <= std::min(i + capacity, int(rules.size())); j++) {
+            if (rules[j - 1].action() == Action::nop()) {
                 continue;
             }
-            vector<Filter> filters_here(begin(filters), begin(filters) + j);
-            vector<int> actions_here(begin(actions), begin(actions) + j);
+            vector<Rule> rules_here(begin(rules), begin(rules) + j);
 
-            std::fill(begin(actions_here), begin(actions_here) + i, -1);
-            std::tie(filters_here, actions_here) = 
-                perform_boolean_minimization(filters_here, actions_here, true);
+            std::for_each(begin(rules_here), begin(rules_here) + i, 
+                    [](auto& x) { x.action() = Action::nop(); });
+            rules_here = perform_boolean_minimization(rules_here, true);
 
-            if (int(filters_here.size()) > capacity) {
+            if (int(rules_here.size()) > capacity) {
                 continue;
             }
 
-            vector<Filter> filters_there = filters;
-            vector<int> actions_there = actions;
+            vector<Rule> rules_there(begin(rules), end(rules));
             
-            std::fill(begin(actions_there) + i, begin(actions_there) + j, -1);
-            std::tie(filters_there, actions_there) =
-                perform_boolean_minimization(filters_there, actions_there, true);
+            std::for_each(begin(rules_there) + i, begin(rules_there) + j, 
+                    [](auto& x) { x.action() = Action::nop(); });
+            rules_there = perform_boolean_minimization(rules_there, true);
 
-            if (best_value < 0 || filters_there.size() == 0 
-                    ||  double(j - i) / filters_there.size() > best_value) {
-                best_filters_here = filters_here;
-                best_actions_here = actions_here;
-                best_filters_there = filters_there;
-                best_actions_there = actions_there;
+            if (best_value < 0 || rules_there.size() == 0 
+                    ||  double(j - i) / rules_there.size() > best_value) {
+                best_rules_here = rules_here;
+                best_rules_there = rules_there;
 
-                if (filters_there.size() == 0) {
-                    return py::make_tuple(
-                        filters_n_actions2svmr(best_filters_here, best_actions_here),
-                        filters_n_actions2svmr(best_filters_there, best_actions_there));
+                if (rules_there.size() == 0) {
+                    return py::make_tuple(rules2svmr(rules_here), rules2svmr(rules_there)); 
                 }
 
-                best_value = double(j - i) / filters_there.size();
+                best_value = double(j - i) / rules_there.size();
             }
         }
     }
 
     if (best_value < 0) {
-        return py::make_tuple(
-            py::object(), filters_n_actions2svmr(filters, actions)
-            );
+        return py::make_tuple(py::object(), rules2svmr(rules));
     } else {
-        return py::make_tuple(
-            filters_n_actions2svmr(best_filters_here, best_actions_here),
-            filters_n_actions2svmr(best_filters_there, best_actions_there));
+        return py::make_tuple(rules2svmr(best_rules_here), rules2svmr(best_rules_there));
     }
 }
 

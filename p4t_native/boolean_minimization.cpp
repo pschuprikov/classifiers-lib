@@ -12,128 +12,110 @@ auto subset(Container const& c, Indices const& indices) {
     return result;
 }
 
-auto try_forward_subsumption(vector<Filter> const& filters, vector<int> const& actions) 
-        -> pair<vector<Filter>, vector<int>> {
+auto try_forward_subsumption(vector<Rule> const& rules)  {
     set<int> active;
-    for (auto i = 0; i < int(filters.size()); i++) {
+    for (auto i = 0; i < int(rules.size()); i++) {
         active.insert(i);
     }
 
-    for (auto i = 0; i < int(filters.size()); i++) {
-        if (active.count(i) == 0) {
+    for (auto i = begin(rules); i != end(rules); ++i) {
+        if (active.count(i - begin(rules)) == 0) {
             continue;
         }
 
-        for (auto j = i + 1; j < int(filters.size()); j++) {
-            if (Filter::subsums(filters[i], filters[j])) {
-                active.erase(j);
+        for (auto j = i + 1; j != end(rules); ++j) {
+            if (Filter::subsums(i->filter(), j->filter())) {
+                active.erase(j - begin(rules));
             }
         }
     }
 
-    return make_pair(subset(filters, active), subset(actions, active));
+    return subset(rules, active);
 }
 
-template<class FilterIt, class ActionIt>
+template<class RuleIt>
 auto check_no_intersection_with(
-        Filter const& filter, int action,
-        FilterIt f_first, FilterIt f_beyond, 
-        ActionIt a_first, ActionIt a_beyond) -> bool {
+        Rule const& rule, RuleIt first, RuleIt beyond) -> bool {
 
-    for (; f_first != f_beyond && a_first != a_beyond; ++f_first, ++a_first) {
-        if (Filter::intersect(filter, *f_first) && action != *a_first) {
+    for (; first != beyond; ++first) {
+        if (Filter::intersect(rule.filter(), first->filter()) && rule.action() != first->action()) {
             return false;
         }
     }
     return true;
 }
 
-auto try_backward_subsumption(
-        vector<Filter> const& filters, vector<int> const& actions, 
-        bool is_default_nop) {
+auto try_backward_subsumption(vector<Rule> const& rules, bool is_default_nop) {
     set<int> active;
-    for (auto i = 0; i < int(filters.size()); i++) {
+    for (auto i = 0; i < int(rules.size()); ++i) {
         active.insert(i);
     }
 
-    for (auto i = 0; i < int(filters.size()); i++) {
-        for (auto j = i + 1; j < int(filters.size()); j++) {
-            if (actions[i] == actions[j] && Filter::subsums(filters[j], filters[i]) &&
-                    check_no_intersection_with(
-                        filters[i], actions[i],
-                        begin(filters) + i + 1, begin(filters) + j,
-                        begin(actions) + i + 1, begin(actions) + j
-                        )
-                    ) {
-                active.erase(i);
+    for (auto i = begin(rules); i != end(rules); ++i) {
+        for (auto j = i + 1; j != end(rules); ++j) {
+            if (i->action() == j->action() && Filter::subsums(j->filter(), i->filter()) &&
+                    check_no_intersection_with(*i, i + 1, j))
+                    {
+                active.erase(i - begin(rules));
             }
         }
-        if (is_default_nop && actions[i] < 0 && 
-                check_no_intersection_with(
-                    filters[i], actions[i],
-                    begin(filters) + i + 1, end(filters),
-                    begin(actions) + i + 1, end(actions)
-                    )
-                ) {
-            active.erase(i);
+        if (is_default_nop && i->action() == Action::nop() && 
+                check_no_intersection_with(*i, i + 1, end(rules))) {
+            active.erase(i - begin(rules));
         }
     }
 
-    return make_pair(subset(filters, active), subset(actions, active));
+    return rules;
 }
 
 
-auto try_resolution(vector<Filter> filters, vector<int> const& actions) {
+auto try_resolution(vector<Rule> const& rules) {
     set<int> active;
-    for (auto i = 0; i < int(filters.size()); i++) {
+    for (auto i = 0; i < int(rules.size()); ++i) {
         active.insert(i);
     }
-    for (auto i = 0; i < int(filters.size()); i++) {
-    if (active.count(i) == 0) {
+
+    for (auto i = begin(rules); i != end(rules); ++i) {
+        if (active.count(i - begin(rules)) == 0) {
             continue;
         }
 
-        for (auto j = i + 1; j < int(filters.size()); j++) {
-            if (active.count(j) == 0) {
+        for (auto j = i + 1; j != end(rules); ++j) {
+            if (active.count(j - begin(rules)) == 0) {
                 continue;
             } 
             bool only_diff;
             int diff_bit;
-            std::tie(only_diff, diff_bit) = Filter::fast_blocker(filters[i], filters[j]);
-            if (actions[i] == actions[j] && only_diff && diff_bit >= 0 &&
-                    check_no_intersection_with(
-                        filters[i], actions[i],
-                        begin(filters) + i + 1, begin(filters) + j,
-                        begin(actions) + i + 1, begin(actions) + j
-                        )) {
-                filters[i].set(diff_bit, Bit::ANY);
-                active.erase(j);
+            std::tie(only_diff, diff_bit) = Filter::fast_blocker(i->filter(), j->filter());
+            if (i->action() == j->action() && only_diff && diff_bit >= 0 &&
+                    check_no_intersection_with(*i, i + 1, j)) {
+                i->filter().set(diff_bit, Bit::ANY);
+                active.erase(j - begin(rules));
             }
         }
     }
 
-    return make_pair(subset(filters, active), subset(actions, active));
+    return subset(rules, active);
 }
 
 
 } // namespace
 } // namespace p4t
 
-auto p4t::perform_boolean_minimization(
-        vector<Filter> filters, vector<int> actions, bool is_default_nop) 
-        -> pair<vector<Filter>, vector<int>> {
-    auto old_size = filters.size();
+auto p4t::perform_boolean_minimization(vector<Rule> rules, bool is_default_nop) 
+        -> vector<Rule> {
+    auto old_size = rules.size();
     while (true) {
-        std::tie(filters, actions) = try_forward_subsumption(filters, actions);
-        std::tie(filters, actions) = try_backward_subsumption(filters, actions, is_default_nop);
-        std::tie(filters, actions) = try_resolution(filters, actions);
+        rules = try_forward_subsumption(rules);
+        rules = try_backward_subsumption(rules, is_default_nop);
+        rules = try_resolution(rules);
 
-        if (filters.size() == old_size) {
+        if (rules.size() == old_size) {
             break;
         }
     
-        old_size = filters.size();
+        old_size = rules.size();
     }
-    return make_pair(std::move(filters), std::move(actions));
+    return rules;
 }
 

@@ -1,7 +1,8 @@
 #include "boolean_minimization.h"
 
-namespace p4t {
 namespace {
+
+using namespace p4t;
 
 template<class Container, class Indices> 
 auto subset(Container const& c, Indices const& indices) {
@@ -65,7 +66,7 @@ auto try_backward_subsumption(vector<Rule> const& rules, bool is_default_nop) {
         }
     }
 
-    return rules;
+    return subset(rules, active);
 }
 
 
@@ -100,21 +101,37 @@ auto try_resolution(vector<Rule> const& rules) {
 
 
 } // namespace
-} // namespace p4t
 
 auto p4t::perform_boolean_minimization(vector<Rule> rules, bool is_default_nop) 
         -> vector<Rule> {
-    auto old_size = rules.size();
-    while (true) {
-        rules = try_forward_subsumption(rules);
-        rules = try_backward_subsumption(rules, is_default_nop);
-        rules = try_resolution(rules);
-
-        if (rules.size() == old_size) {
-            break;
-        }
     
-        old_size = rules.size();
+    auto previous_size = rules.size(); 
+    auto const update_size = [&previous_size] (auto new_size, auto method) -> bool {
+        if (new_size < previous_size) {
+            log()->info("{} saved {} rules", method, previous_size - new_size);
+            previous_size = new_size;
+            return true;
+        }
+        return false;
+    };
+
+    auto trying = true;
+    while (trying) {
+        trying = false;
+        rules = try_forward_subsumption(rules);
+        if (update_size(rules.size(), "forward subsumption")) {
+            trying = true;
+        }
+
+        rules = try_backward_subsumption(rules, is_default_nop);
+        if (update_size(rules.size(), "backward subsumption")) {
+            trying = true;
+        }
+
+        rules = try_resolution(rules);
+        if (update_size(rules.size(), "resolution")) {
+            trying = true;
+        }
     }
     return rules;
 }

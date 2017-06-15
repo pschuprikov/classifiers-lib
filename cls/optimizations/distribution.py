@@ -21,42 +21,49 @@ def _to_octave_tcam(cls):
     return octave_matrix
 
 
-def palette_cdb(cls, num_nodes):
+def palette_cbd(cls, capacities):
     """ Runs Palette's cut-based algorithm.
 
     WARNING: the result is not always equivalent!
 
     Arguments:
         cls: classifier
-        num_nodes: number of nodes to distribute on
+        capacities: switch capacities
 
     Returns:
-        The number of rules per node
+        The number of rules per node or None if capacities are not satisfied
 
     """
     octave = Oct2Py()
     _, _, [subclassifiers] = octave.feval(
         PALETTE_TEMPLATE.format('DAG_alg'),
-        _to_octave_tcam(cls), num_nodes, METIS_DIR, 20, nout=3)
+        _to_octave_tcam(cls), len(capacities), METIS_DIR, 20, nout=3)
+
+    if min(capacities) < max(len(sc) for sc in subclassifiers):
+        return None
+
     return [len(sc) for sc in subclassifiers]
 
 
-def palette_pdb(cls, num_nodes):
+def palette_pbd(cls, capacities):
     """ Runs Palette's pivot-based algorithm
 
     Arguments:
         cls: classifier
-        num_nodes: number of nodes to distribute on
+        capacities: switch capacities
 
     Returns:
-        The number of rules per node
+        The number of rules per node or None if capacities are not satisfied
 
     """
     octave = Oct2Py()
     _, _, [values] = octave.feval(
         PALETTE_TEMPLATE.format('pivot_bit_greedy_alg'),
-        _to_octave_tcam(cls), num_nodes, 1, nout=3
+        _to_octave_tcam(cls), len(capacities), 1, nout=3
     )
+
+    if min(capacities) < max(values):
+        return None
     return values
 
 
@@ -114,14 +121,14 @@ def _create_obs_alloc_file(dir, capacities):
 
 
 def one_big_switch(cls, capacities):
-    """
-    
+    """ Runs a rectangle-based algorithm from "One Big Switch" abstraction
+
     Args:
         cls: classifier
         capacities: nodes' capacities
 
     Returns:
-        True if capacities were satisfied
+        The number of rules per node or None if method has failed
     """
 
     obs_classifier = _to_obs_classifier(cls)
@@ -142,12 +149,12 @@ def one_big_switch(cls, capacities):
         return [int(s) for s in lines]
 
 
-def fill_from_native(cls, native_rules):
+def _fill_from_native(cls, native_rules):
     for mask, value, action in native_rules:
         cls.vmr.append(SimpleVMREntry(mask, value, action, 0))
 
 
-def place_one(cls, capacity):
+def _bm_place_one(cls, capacity):
     """
     
     Args:
@@ -163,27 +170,56 @@ def place_one(cls, capacity):
         return None, cls
 
     cls_here = cls.subset([])
-    fill_from_native(cls_here, here)
+    _fill_from_native(cls_here, here)
 
     cls_there = cls.subset([])
-    fill_from_native(cls_there, there)
+    _fill_from_native(cls_there, there)
     if len(there) == 0:
         cls_there.vmr.default_action = None
 
     return cls_here, cls_there
 
 
-def ours(cls, capacities):
+def one_bit(cls, capacities):
+    """ Runs trivial distribution with one bit of metadata
+
+    Arguments:
+        cls: classifier
+        capacities: switch capacities
+
+    Returns:
+        The number of rules per node or None if method has failed
+
+    """
+    num_rules_left = len(cls)
+    result = []
+    for capacity in capacities:
+        num_here = min(num_rules_left, capacity)
+        result.append(num_here)
+        num_rules_left -= num_here
+
+    if num_rules_left > 0:
+        return None
+    return result
+
+
+def boolean_minimization(cls, capacities):
+    """ Runs an algorithm based using `nop` caps and  boolean minimization
+
+    Arguments:
+        cls: classifier
+        capacities: switch capacities
+
+    Returns:
+        The number of rules per node or None if method has failed
+
+    """
     result = []
     for c in capacities:
-        here, cls = place_one(cls, c)
+        here, cls = _bm_place_one(cls, c)
 
         if here is None:
-            print(cls.vmr)
             return None
-
-        print(sum(1 for x in here if x.action is not None),
-              sum(1 for x in cls if x.action is not None))
 
         result.append(here)
 

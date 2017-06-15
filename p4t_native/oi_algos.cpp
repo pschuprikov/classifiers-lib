@@ -27,15 +27,6 @@ auto find_exact(vector<Filter> const& filters, vector<int> const& bits_in_use) {
     return exact;
 }
 
-struct BitStats {
-    BitStats(size_t n) : dontcare(n), zeros(n), ones(n), exact_bits{} {}
-
-    vector<int> dontcare;
-    vector<int> zeros;
-    vector<int> ones;
-    vector<int> exact_bits;
-};
-
 auto calc_bit_stats(vector<Filter> const& filters, vector<int> const& bits_in_use) {
     BitStats stats{filters[0].size()};
 
@@ -356,7 +347,7 @@ auto p4t::best_to_stay_minme(vector<Filter> filters, size_t l, MinMEMode mode, b
     std::iota(begin(indices), end(indices), 0);
 
     while (bits_in_use.size() > l || (only_exact && bits_in_use != exact_bits_in_use)) {
-        auto const stats = calc_bit_stats(filters, bits_in_use);
+        auto const stats = ::calc_bit_stats(filters, bits_in_use);
 
         vector<int> rm_bits;
         vector<int> oi_indices;
@@ -435,6 +426,15 @@ auto p4t::find_maximal_oi_subset_indices(vector<Filter> const& filters, vector<i
 
     log()->info("...Finished");
     return result;
+}
+
+auto p4t::calc_bit_stats(vector<Filter> const& filters) -> BitStats {
+    if (filters.empty()) {
+        return BitStats(0);
+    }
+    vector<int> bits_in_use(filters[0].size());
+    std::iota(begin(bits_in_use), end(bits_in_use), 0);
+    return ::calc_bit_stats(filters, bits_in_use);
 }
 
 auto p4t::bits_to_mask(vector<int> const& bits) -> Filter::BitArray {

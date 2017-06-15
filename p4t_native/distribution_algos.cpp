@@ -67,14 +67,3 @@ auto p4t::perform_best_splitting(vector<Rule> const& rules, int capacity)
     
     return make_tuple(true, best_rules_here, best_rules_there);
 }
-
-auto p4t::split_by_expansion(vector<Rule> const& rules, int capacity) 
-    -> tuple<bool, vector<Rule>, vector<Rule>> {
-
-    vector<Filter> filters(rules.size());
-    std::transform(begin(rules), end(rules), begin(filters), end(filters)
-        [](auto const& x) {
-            return x.filter();
-        }
-    );
-}

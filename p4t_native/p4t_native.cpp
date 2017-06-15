@@ -11,7 +11,7 @@
 #include "chain_algos.h"
 #include "oi_algos.h"
 #include "expansion_algos.h"
-#include "boolean_minimization.h"
+#include "distribution_algos.h"
 
 #include "p4t_native.h"
 
@@ -171,70 +171,16 @@ void p4t::pylog(string msg) {
 auto p4t::split(py::object classifier, int capacity) -> py::object {
     auto const rules = svmr2rules(classifier);
 
-    if (int(rules.size()) <= capacity) {
-        return py::make_tuple(rules2svmr(rules), rules2svmr({}));
-    }
+    bool success;
+    vector<Rule> here, there;
 
-    auto best_value = -1.0;
+    std::tie(success, here, there) = perform_best_splitting(rules, capacity);
 
-    vector<Rule> best_rules_here{};
-    vector<Rule> best_rules_there{};
-
-    auto first_non_nop = -1;
-    for (auto i = 0; i < int(rules.size()); i++) {
-        if (rules[i].action() != Action::nop()) {
-            first_non_nop = i;
-            break;
-        }
-    }
-
-
-    for (auto i = 0; i <= std::min(first_non_nop, int(rules.size())); i++) {
-        if (rules[i].action() == Action::nop()) {
-            continue;
-        }
-        if (i > 0 && rules[i].action() == Action::nop() && rules[i - 1].action() == Action::nop()) {
-            break;
-        }
-        for (auto j = i + capacity / 2; j <= std::min(i + capacity, int(rules.size())); j++) {
-            if (rules[j - 1].action() == Action::nop()) {
-                continue;
-            }
-            vector<Rule> rules_here(begin(rules), begin(rules) + j);
-
-            std::for_each(begin(rules_here), begin(rules_here) + i, 
-                    [](auto& x) { x.action() = Action::nop(); });
-            rules_here = perform_boolean_minimization(rules_here, true);
-
-            if (int(rules_here.size()) > capacity) {
-                continue;
-            }
-
-            vector<Rule> rules_there(begin(rules), end(rules));
-            
-            std::for_each(begin(rules_there) + i, begin(rules_there) + j, 
-                    [](auto& x) { x.action() = Action::nop(); });
-            rules_there = perform_boolean_minimization(rules_there, true);
-
-            if (best_value < 0 || rules_there.size() == 0 
-                    ||  double(j - i) / rules_there.size() > best_value) {
-                best_rules_here = rules_here;
-                best_rules_there = rules_there;
-
-                if (rules_there.size() == 0) {
-                    return py::make_tuple(rules2svmr(rules_here), rules2svmr(rules_there)); 
-                }
-
-                best_value = double(j - i) / rules_there.size();
-            }
-        }
-    }
-
-    if (best_value < 0) {
+    if (!success) {
         return py::make_tuple(py::object(), rules2svmr(rules));
-    } else {
-        return py::make_tuple(rules2svmr(best_rules_here), rules2svmr(best_rules_there));
-    }
+    } 
+
+    return py::make_tuple(rules2svmr(here), rules2svmr(there));
 }
 
 

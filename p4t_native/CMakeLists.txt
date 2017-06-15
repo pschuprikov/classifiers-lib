@@ -21,6 +21,7 @@ add_library(p4t_native SHARED
     oi_algos.cpp
     boolean_minimization.cpp
     expansion_algos.cpp
+    distribution_algos.cpp
     )
 
 set_target_properties(p4t_native PROPERTIES PREFIX "")

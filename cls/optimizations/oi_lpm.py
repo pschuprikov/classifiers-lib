@@ -40,11 +40,6 @@ def _chain2bits(bitchain, bitwidth):
     return tuple(chain(*_chain2diffs(bitchain + [list(range(bitwidth))])))
 
 
-def set_number_of_threads(num_threads):
-    """ Sets the number of threads to be used by an optimization engine."""
-    p4t_native.set_num_threads(num_threads)
-
-
 def minimize_num_groups(classifier):
     """ Splits the classifier into the minimal possible number of LPM classifiers.
 

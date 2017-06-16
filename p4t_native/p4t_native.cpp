@@ -12,6 +12,7 @@
 #include "oi_algos.h"
 #include "expansion_algos.h"
 #include "distribution_algos.h"
+#include "boolean_minimization.h"
 
 #include "p4t_native.h"
 
@@ -183,4 +184,9 @@ auto p4t::split(py::object classifier, int capacity) -> py::object {
     return py::make_tuple(rules2svmr(here), rules2svmr(there));
 }
 
+auto p4t::try_boolean_minimization(py::object classifier) -> py::object {
+    auto const rules = svmr2rules(classifier);
+    auto const result = perform_boolean_minimization(rules, true);
+    return rules2svmr(result);
+}
 

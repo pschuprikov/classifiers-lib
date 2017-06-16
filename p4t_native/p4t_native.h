@@ -11,6 +11,7 @@ auto min_bmgr(py::object classifiers, int max_num_groups) -> py::object;
 auto best_subgroup(py::object classifier, int max_width, bool only_exact, string algo) -> py::object;
 void set_num_threads(int num_threads);
 void pylog(string msg);
+auto try_boolean_minimization(py::object classifier) -> py::object;
 auto split(py::object classifier, int capacity) -> py::object;
 
 }

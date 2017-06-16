@@ -6,6 +6,7 @@ from oct2py import Oct2Py
 from bitstring import Bits
 
 from cls.classifiers.simple import SimpleVMREntry
+from cls.optimizations.native_utils import fill_from_native
 import p4t_native
 
 PALETTE_TEMPLATE = '/home/pschuprikov/test/TCAMs/{}.m'
@@ -149,11 +150,6 @@ def one_big_switch(cls, capacities):
         return [int(s) for s in lines]
 
 
-def _fill_from_native(cls, native_rules):
-    for mask, value, action in native_rules:
-        cls.vmr.append(SimpleVMREntry(mask, value, action, 0))
-
-
 def _bm_place_one(cls, capacity):
     """
     
@@ -170,10 +166,10 @@ def _bm_place_one(cls, capacity):
         return None, cls
 
     cls_here = cls.subset([])
-    _fill_from_native(cls_here, here)
+    fill_from_native(cls_here, here)
 
     cls_there = cls.subset([])
-    _fill_from_native(cls_there, there)
+    fill_from_native(cls_there, there)
     if len(there) == 0:
         cls_there.vmr.default_action = None
 

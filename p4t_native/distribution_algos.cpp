@@ -27,7 +27,8 @@ auto p4t::perform_best_splitting(vector<Rule> const& rules, int capacity)
         if (rules[i].action() == Action::nop()) {
             continue;
         }
-        for (auto j = i + capacity / 2; j <= std::min(i + capacity, int(rules.size())); j++) {
+        for (auto j = std::min(i + capacity, int(rules.size())); j > i; j--) {
+            log()->info(" trying j = {:d}", j);
             if (rules[j - 1].action() == Action::nop()) {
                 continue;
             }
@@ -57,6 +58,7 @@ auto p4t::perform_best_splitting(vector<Rule> const& rules, int capacity)
                 }
 
                 best_value = double(j - i) / rules_there.size();
+                break;
             }
         }
     }

@@ -128,10 +128,10 @@ auto p4t::perform_boolean_minimization(vector<Rule> rules, bool is_default_nop)
             trying = true;
         }
 
-        rules = try_resolution(rules);
-        if (update_size(rules.size(), "resolution")) {
-            trying = true;
-        }
+        //rules = try_resolution(rules);
+        //if (update_size(rules.size(), "resolution")) {
+        //    trying = true;
+        //}
     }
     return rules;
 }

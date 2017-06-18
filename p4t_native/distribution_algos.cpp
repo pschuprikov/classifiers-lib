@@ -27,39 +27,47 @@ auto p4t::perform_best_splitting(vector<Rule> const& rules, int capacity)
         if (rules[i].action() == Action::nop()) {
             continue;
         }
-        for (auto j = std::min(i + capacity, int(rules.size())); j > i; j--) {
-            log()->info(" trying j = {:d}", j);
-            if (rules[j - 1].action() == Action::nop()) {
-                continue;
-            }
-            vector<Rule> rules_here(begin(rules), begin(rules) + j);
+        vector<Rule> rules_here;
 
+        auto l = i;
+        auto r = std::min(i + capacity, int(rules.size()));
+
+        while (r - l > 1) {
+            auto m = (r + l) / 2;
+            log()->info(" trying j = {:d}", m);
+
+            rules_here.assign(begin(rules), begin(rules) + m);
             std::for_each(begin(rules_here), begin(rules_here) + i, 
                     [](auto& x) { x.action() = Action::nop(); });
             rules_here = perform_boolean_minimization(rules_here, true);
 
             if (int(rules_here.size()) > capacity) {
-                continue;
+                r = m;
+            } else {
+                l = m;
+            }
+        }
+
+        if (l == i) {
+            continue;
+        }
+
+        vector<Rule> rules_there(begin(rules), end(rules));
+        
+        std::for_each(begin(rules_there) + i, begin(rules_there) + l, 
+                [](auto& x) { x.action() = Action::nop(); });
+        rules_there = perform_boolean_minimization(rules_there, true);
+
+        if (best_value < 0 || rules_there.size() == 0 
+                ||  double(l - i) / rules_there.size() > best_value) {
+            best_rules_here = rules_here;
+            best_rules_there = rules_there;
+
+            if (rules_there.size() == 0) {
+                return make_tuple(true, rules_here, rules_there); 
             }
 
-            vector<Rule> rules_there(begin(rules), end(rules));
-            
-            std::for_each(begin(rules_there) + i, begin(rules_there) + j, 
-                    [](auto& x) { x.action() = Action::nop(); });
-            rules_there = perform_boolean_minimization(rules_there, true);
-
-            if (best_value < 0 || rules_there.size() == 0 
-                    ||  double(j - i) / rules_there.size() > best_value) {
-                best_rules_here = rules_here;
-                best_rules_there = rules_there;
-
-                if (rules_there.size() == 0) {
-                    return make_tuple(true, rules_here, rules_there); 
-                }
-
-                best_value = double(j - i) / rules_there.size();
-                break;
-            }
+            best_value = double(l - i) / rules_there.size();
         }
     }
 

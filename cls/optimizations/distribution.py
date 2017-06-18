@@ -9,9 +9,9 @@ from cls.classifiers.simple import SimpleVMREntry
 from cls.optimizations.native_utils import fill_from_native
 import p4t_native
 
-PALETTE_TEMPLATE = '/home/pschuprikov/test/TCAMs/{}.m'
-METIS_DIR = '/home/pschuprikov/.nix-profile/bin'
-OBS_EXEC = '/home/pschuprikov/repos/opt-big-switch/src/graph_algorithm/batch_DFS_MP'
+PALETTE_TEMPLATE = '/home/snikolenko/networking/bitik/classifiers-lib/external/TCAMs/{}.m'
+METIS_DIR = '/usr/bin'
+OBS_EXEC = '/home/snikolenko/networking/bitik/classifiers-lib/external/batch_DFS_MP'
 
 def _to_octave_tcam(cls):
     octave_matrix = []

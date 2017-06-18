@@ -53,13 +53,13 @@ auto try_backward_subsumption(vector<Rule> const& rules, bool is_default_nop) {
     }
 
     for (auto i = begin(rules); i != end(rules); ++i) {
-        for (auto j = i + 1; j != end(rules); ++j) {
-            if (i->action() == j->action() && Filter::subsums(j->filter(), i->filter()) &&
-                    check_no_intersection_with(*i, i + 1, j))
-                    {
-                active.erase(i - begin(rules));
-            }
-        }
+        // for (auto j = i + 1; j != end(rules); ++j) {
+        //     if (i->action() == j->action() && Filter::subsums(j->filter(), i->filter()) &&
+        //             check_no_intersection_with(*i, i + 1, j))
+        //             {
+        //         active.erase(i - begin(rules));
+        //     }
+        // }
         if (is_default_nop && i->action() == Action::nop() && 
                 check_no_intersection_with(*i, i + 1, end(rules))) {
             active.erase(i - begin(rules));

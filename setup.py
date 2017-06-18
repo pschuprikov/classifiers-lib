@@ -9,9 +9,10 @@ p4t_native = Extension(
         'chain_algos.cpp',
         'oi_algos.cpp',
         'expansion_algos.cpp',
-        'boolean_minimization.cpp'
+        'boolean_minimization.cpp',
+        'distribution_algos.cpp'
     ]],
-    libraries=['boost_python', 'gomp'],
+    libraries=['boost_python-py35', 'gomp'],
     include_dirs=['p4t_native'],
     extra_compile_args=['-fopenmp', '-std=c++14', '-Wall']
 )

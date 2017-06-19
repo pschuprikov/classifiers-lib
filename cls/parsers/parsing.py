@@ -43,8 +43,7 @@ def _parse_range(range):
 
 def _int_to_bit(x, num_bits):
     result = [int(digit) for digit in bin(x)[2:]]
-    result.extend(repeat(0, num_bits - len(result)))
-    return result
+    return [0] * (num_bits - len(result)) + result
 
 
 def _octets_to_bits(s):

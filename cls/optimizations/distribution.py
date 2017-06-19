@@ -1,4 +1,6 @@
 import subprocess
+import shutil 
+import os
 from os import path
 from tempfile import TemporaryDirectory
 from collections import namedtuple, defaultdict
@@ -9,9 +11,10 @@ from cls.classifiers.simple import SimpleVMREntry
 from cls.optimizations.native_utils import fill_from_native
 import p4t_native
 
-PALETTE_TEMPLATE = '/home/snikolenko/networking/bitik/classifiers-lib/external/TCAMs/{}.m'
-METIS_DIR = '/usr/bin'
-OBS_EXEC = '/home/snikolenko/networking/bitik/classifiers-lib/external/batch_DFS_MP'
+EXTERNAL_DIR = path.join(path.dirname(path.abspath(__file__)), '../../external')
+PALETTE_TEMPLATE = path.join(EXTERNAL_DIR, 'TCAMs') + '/{}.m'
+METIS_DIR = path.dirname(shutil.which('gpmetis'))
+OBS_EXEC = path.join(EXTERNAL_DIR, 'batch_DFS_MP')
 
 def _to_octave_tcam(cls):
     octave_matrix = []
@@ -72,12 +75,16 @@ def _is_prefix(mask):
     return all(mask[i] or not mask[i + 1] for i in range(len(mask) - 1))
 
 
+def _to_int(value):
+    return sum(2 ** i for i, x in enumerate(reversed(value)) if x)
+
+
 def _to_rect_id(value, mask):
     if not _is_prefix(mask):
         raise ValueError("Mask is not prefix!")
 
-    base = 2 ** (len(mask) - sum(mask)) - 1
-    offset = Bits(value[:sum(mask)]).uint if sum(mask) > 0 else 0
+    base = 2 ** sum(mask) - 1
+    offset = _to_int(value[:sum(mask)])
 
     return base + offset
 
@@ -85,20 +92,13 @@ OBSRule = namedtuple('OBSRule', ['src_range_id', 'dst_range_id', 'action'])
 
 
 def _to_obs(entry):
-    try:
-        src_range_id = _to_rect_id(entry.value[:32], entry.mask[:32])
-        dst_range_id = _to_rect_id(entry.value[32:64], entry.mask[32:64])
-    except ValueError:
-        print(entry, entry.mask[:32], entry.mask[32:64])
-        raise
+    src_range_id = _to_rect_id(entry.value[:32], entry.mask[:32])
+    dst_range_id = _to_rect_id(entry.value[32:64], entry.mask[32:64])
     return OBSRule(src_range_id, dst_range_id, entry.action)
 
 
 def _to_obs_classifier(cls):
-    obs_cls = defaultdict(int)
-    for entry in cls:
-        obs_cls[_to_obs(entry)] += 1
-    return obs_cls
+    return list(_to_obs(entry) for entry in cls)
 
 
 def _create_obs_policy_file(dir, obs_cls):
@@ -106,8 +106,8 @@ def _create_obs_policy_file(dir, obs_cls):
     with open(filename, 'w+') as policy_file:
         policy_file.write('1 _ {:d}\n'.format(len(obs_cls)))
 
-        for rule, count in obs_cls.items():
-            policy_file.write('{1} {2} 0 0 0 0 {0} {3}\n'.format(count, *rule))
+        for rule in obs_cls:
+            policy_file.write('{0} {1} 0 0 0 0 1 {2}\n'.format(*rule))
     return filename
 
 

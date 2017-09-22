@@ -1,9 +1,10 @@
 with import <nixpkgs> {};
-with pkgs.python35Packages;
+with pkgs.python3Packages;
 
 let psc_python = python35.withPackages (pkgs: [
-      pytest bitstring pytestrunner ipython] );
-    psc_boost = pkgs.boost.override { python = python35; };
+      pytest bitstring pytestrunner oct2py ipython
+    ]);
+    psc_boost = pkgs.boost.override { python = python3; };
 in pkgs.stdenv.mkDerivation rec {
   name = "cls";
   src = ./.;

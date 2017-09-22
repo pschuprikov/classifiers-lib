@@ -8,7 +8,7 @@ auto sink() -> std::shared_ptr<spdlog::sinks::sink> const& {
     static std::shared_ptr<spdlog::sinks::sink> sink{};
 
     if (!initialized) {
-        sink = std::make_shared<spdlog::sinks::simple_file_sink_mt>("logs/p4t_opt.log");
+        sink = std::make_shared<spdlog::sinks::simple_file_sink_mt>("p4t_opt.log");
         initialized = true;
     }
 

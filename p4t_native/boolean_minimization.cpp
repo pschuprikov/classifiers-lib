@@ -35,15 +35,29 @@ auto try_forward_subsumption(vector<Rule> const& rules)  {
 }
 
 template<class RuleIt>
+auto find_first_intersection(
+        Rule const& rule, RuleIt first, RuleIt beyond) {
+    return std::find_if(first, beyond,
+        [&rule](auto const& other) {
+            return Filter::intersect(rule.filter(), other.filter()) && rule.action() != other.action();
+        }
+    );
+}
+
+template<class RuleIt>
+auto find_first_subsums(
+        Rule const& rule, RuleIt first, RuleIt beyond) {
+    return std::find_if(first, beyond,
+        [&rule](auto const& other) {
+            return Filter::subsums(other.filter(), rule.filter());
+        }
+    );
+}
+
+template<class RuleIt>
 auto check_no_intersection_with(
         Rule const& rule, RuleIt first, RuleIt beyond) -> bool {
-
-    for (; first != beyond; ++first) {
-        if (Filter::intersect(rule.filter(), first->filter()) && rule.action() != first->action()) {
-            return false;
-        }
-    }
-    return true;
+    return find_first_intersection(rule, first, beyond) != beyond;
 }
 
 auto try_backward_subsumption(vector<Rule> const& rules, bool is_default_nop) {
@@ -52,17 +66,14 @@ auto try_backward_subsumption(vector<Rule> const& rules, bool is_default_nop) {
         active.insert(i);
     }
 
-    for (auto i = begin(rules); i != end(rules); ++i) {
-        // for (auto j = i + 1; j != end(rules); ++j) {
-        //     if (i->action() == j->action() && Filter::subsums(j->filter(), i->filter()) &&
-        //             check_no_intersection_with(*i, i + 1, j))
-        //             {
-        //         active.erase(i - begin(rules));
-        //     }
-        // }
-        if (is_default_nop && i->action() == Action::nop() && 
-                check_no_intersection_with(*i, i + 1, end(rules))) {
-            active.erase(i - begin(rules));
+    for (auto it = rbegin(rules); it != rend(rules); ++it) {
+        auto const isect = find_first_intersection(*it, it.base(), end(rules));
+        auto const subsum = find_first_subsums(*it, it.base(), end(rules));
+        if (std::distance(subsum, isect) > 0) {
+            active.erase(it.base() - begin(rules) - 1);
+        }
+        if (is_default_nop && it->action() == Action::nop() && isect == end(rules)) {
+            active.erase(it.base() - begin(rules) - 1);
         }
     }
 
@@ -88,6 +99,7 @@ auto try_resolution(vector<Rule> const& rules) {
             bool only_diff;
             int diff_bit;
             std::tie(only_diff, diff_bit) = Filter::fast_blocker(i->filter(), j->filter());
+
             if (i->action() == j->action() && only_diff && diff_bit >= 0 &&
                     check_no_intersection_with(*i, i + 1, j)) {
                 i->filter().set(diff_bit, Bit::ANY);

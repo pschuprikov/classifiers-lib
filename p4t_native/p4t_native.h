@@ -13,6 +13,7 @@ void set_num_threads(int num_threads);
 void pylog(string msg);
 auto try_boolean_minimization(py::object classifier) -> py::object;
 auto split(py::object classifier, int capacity) -> py::object;
+auto calc_obstruction_weights(py::object classifier) -> py::object;
 
 }
 

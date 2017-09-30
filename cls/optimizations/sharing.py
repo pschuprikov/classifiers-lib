@@ -1,3 +1,4 @@
+import p4t_native
 from cls.optimizations.compression import try_boolean_minimization
 
 
@@ -21,3 +22,16 @@ def split_shared_unshared(cls, is_shareable):
     shared = try_boolean_minimization(shared)
     unshared = try_boolean_minimization(unshared)
     return shared, unshared
+
+
+def weight_action_obstruction(cls):
+    """ Given a classifier, weight its actions according to obstruction
+
+    Args:
+        cls: classifier
+
+    Returns:
+        a dictionary mapping actions to their weights
+    """
+    return p4t_native.calc_obstruction_weights(cls)
+

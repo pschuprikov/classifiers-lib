@@ -114,7 +114,7 @@ auto try_resolution(vector<Rule> const& rules) {
 
 } // namespace
 
-auto p4t::perform_boolean_minimization(vector<Rule> rules, bool is_default_nop) 
+auto p4t::boolean_minimization::perform_boolean_minimization(vector<Rule> rules, bool is_default_nop) 
         -> vector<Rule> {
     
     auto previous_size = rules.size(); 
@@ -146,5 +146,23 @@ auto p4t::perform_boolean_minimization(vector<Rule> rules, bool is_default_nop)
         //}
     }
     return rules;
+}
+
+auto p4t::boolean_minimization::calc_obstruction_weights(vector<Rule> const& rules) 
+        -> std::unordered_map<Action, int> {
+    std::unordered_map<Action, set<int>> counting_rules;
+    for (auto i = begin(rules); i != end(rules); ++i) {
+        for (auto j = begin(rules); j != i; ++j) {
+            if (j->action() != i->action() && Filter::intersect(i->filter(), j->filter())) {
+                counting_rules[j->action()].insert(j - begin(rules));
+            }
+        }
+    }
+
+    std::unordered_map<Action, int> result{};
+    for (auto p : counting_rules) {
+        result[p.first] = p.second.size();
+    }
+    return result;
 }
 

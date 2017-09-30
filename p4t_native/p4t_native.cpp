@@ -186,7 +186,16 @@ auto p4t::split(py::object classifier, int capacity) -> py::object {
 
 auto p4t::try_boolean_minimization(py::object classifier) -> py::object {
     auto const rules = svmr2rules(classifier);
-    auto const result = perform_boolean_minimization(rules, true);
+    auto const result = boolean_minimization::perform_boolean_minimization(rules, true);
     return rules2svmr(result);
 }
 
+auto p4t::calc_obstruction_weights(py::object classifier) -> py::object {
+    auto const rules = svmr2rules(classifier);
+    auto const weights = boolean_minimization::calc_obstruction_weights(rules);
+    py::dict result{}; 
+    for (auto p : weights) {
+        result[p.first.code()] = p.second;
+    }
+    return result;
+}

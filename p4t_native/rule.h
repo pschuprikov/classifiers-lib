@@ -23,6 +23,7 @@ private:
     int code_; 
 };
 
+
 inline auto operator==(Action const& rhs, Action const& lhs) {
     return rhs.code() == lhs.code();
 }
@@ -58,6 +59,17 @@ public:
 private:
     Filter filter_;
     Action action_;
+};
+
+}
+
+namespace std {
+
+template<>
+struct hash<p4t::Action> {
+    size_t operator()(p4t::Action const& action) const {
+        return static_cast<size_t>(action.code());
+    }
 };
 
 }

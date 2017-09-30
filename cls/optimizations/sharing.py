@@ -33,5 +33,9 @@ def weight_action_obstruction(cls):
     Returns:
         a dictionary mapping actions to their weights
     """
-    return p4t_native.calc_obstruction_weights(cls)
+    result = p4t_native.calc_obstruction_weights(cls)
+    for e in cls:
+        if e.action not in result:
+            result[e.action] = 0
+    return result
 

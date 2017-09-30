@@ -154,7 +154,7 @@ auto p4t::boolean_minimization::calc_obstruction_weights(vector<Rule> const& rul
     for (auto i = begin(rules); i != end(rules); ++i) {
         for (auto j = begin(rules); j != i; ++j) {
             if (j->action() != i->action() && Filter::intersect(i->filter(), j->filter())) {
-                counting_rules[j->action()].insert(j - begin(rules));
+                counting_rules[i->action()].insert(j - begin(rules));
             }
         }
     }

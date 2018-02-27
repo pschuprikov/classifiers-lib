@@ -12,7 +12,7 @@ p4t_native = Extension(
         'boolean_minimization.cpp',
         'distribution_algos.cpp'
     ]],
-    libraries=['boost_python-py35', 'gomp'],
+    libraries=['boost_python', 'gomp'],
     include_dirs=['p4t_native'],
     extra_compile_args=['-fopenmp', '-std=c++14', '-Wall']
 )
@@ -24,7 +24,7 @@ setup(
     license='Apache-2.0',
     packages=find_packages(exclude=['test*']),
     ext_modules=[p4t_native],
-    install_requires=['bitstring'],
+    install_requires=['bitstring', 'click', 'numpy', 'scipy'],
     setup_requires=['pytest-runner'],
     tests_require=['pytest']
 )

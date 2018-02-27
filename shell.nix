@@ -5,7 +5,7 @@ let oct2py = import ./oct2py.nix {
       pythonPackages = pkgs.python3Packages; 
       inherit fetchFromGitHub;
     };
-    psc_python = python35.withPackages (pkgs: [
+    psc_python = python3.withPackages (pkgs: [
       pytest bitstring pytestrunner oct2py ipython
     ]);
     psc_boost = pkgs.boost.override { python = python3; };

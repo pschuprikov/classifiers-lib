@@ -1,8 +1,8 @@
 with import <nixpkgs> {};
 with pkgs.python3Packages;
 
-let psc_python = python35.withPackages (pkgs: [
-      pytest bitstring pytestrunner oct2py ipython
+let psc_python = python3.withPackages (pkgs: [
+      pytest bitstring pytestrunner ipython
     ]);
     psc_boost = pkgs.boost.override { python = python3; };
 in pkgs.stdenv.mkDerivation rec {

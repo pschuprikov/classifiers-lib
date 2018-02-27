@@ -3,6 +3,9 @@ tags
 # Ignore nix-build result (used for IntelliJ-Idea support)
 result
 
+# Ignore built exe
+external/batch_DFS_MP
+
 # Created by https://www.gitignore.io/api/python
 
 ### Python ###

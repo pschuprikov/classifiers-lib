@@ -138,11 +138,11 @@ def one_big_switch(cls, capacities):
         policy_file = _create_obs_policy_file(dir, obs_classifier)
         alloc_file = _create_obs_alloc_file(dir, capacities)
 
-        res = subprocess.run(
+        res = subprocess.check_output(
             [OBS_EXEC, alloc_file, policy_file],
-            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
             universal_newlines=True)
-        *lines, outcome, _ = res.stdout.split('\n')
+        *lines, outcome, _ = res.split('\n')
 
         if outcome != 'OK':
             return None

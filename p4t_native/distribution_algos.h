@@ -5,7 +5,7 @@
 
 namespace p4t {
 
-auto perform_best_splitting(vector<Rule> const& rules, int capacity) 
+auto perform_best_splitting(vector<Rule> const& rules, int capacity, bool use_resolution) 
     -> tuple<bool, vector<Rule>, vector<Rule>>;
 
 }

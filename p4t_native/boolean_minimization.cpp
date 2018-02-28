@@ -114,7 +114,7 @@ auto try_resolution(vector<Rule> const& rules) {
 
 } // namespace
 
-auto p4t::boolean_minimization::perform_boolean_minimization(vector<Rule> rules, bool is_default_nop) 
+auto p4t::boolean_minimization::perform_boolean_minimization(vector<Rule> rules, bool is_default_nop, bool use_resolution) 
         -> vector<Rule> {
     
     auto previous_size = rules.size(); 
@@ -140,10 +140,15 @@ auto p4t::boolean_minimization::perform_boolean_minimization(vector<Rule> rules,
             trying = true;
         }
 
-        //rules = try_resolution(rules);
-        //if (update_size(rules.size(), "resolution")) {
-        //    trying = true;
-        //}
+        if (use_resolution) {
+            rules = try_resolution(rules);
+            if (update_size(rules.size(), "resolution")) {
+                trying = true;
+            }
+        } else {
+            // One iteration is enough in this case
+            break;
+        }
     }
     return rules;
 }

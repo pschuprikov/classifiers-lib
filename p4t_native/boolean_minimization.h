@@ -5,7 +5,7 @@
 
 namespace p4t {
 namespace boolean_minimization {
-    auto perform_boolean_minimization(vector<Rule> rules, bool is_default_nop) 
+    auto perform_boolean_minimization(vector<Rule> rules, bool is_default_nop, bool use_resolution) 
         -> vector<Rule>;
     auto calc_obstruction_weights(vector<Rule> const& rules) -> std::unordered_map<Action, int>;
 }

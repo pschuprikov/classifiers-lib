@@ -150,17 +150,18 @@ def one_big_switch(cls, capacities):
         return [int(s) for s in lines]
 
 
-def _bm_place_one(cls, capacity):
+def _bm_place_one(cls, capacity, use_resolution):
     """
     
     Args:
         cls: 
         capacity: 
+        use_resolution: use resolution technique? (slower)
 
     Returns:
 
     """
-    here, there = p4t_native.split(cls, capacity)
+    here, there = p4t_native.split(cls, capacity, use_resolution)
 
     if here is None:
         return None, cls
@@ -199,12 +200,13 @@ def one_bit(cls, capacities):
     return result
 
 
-def boolean_minimization(cls, capacities):
+def boolean_minimization(cls, capacities, use_resolution=False):
     """ Runs an algorithm based using `nop` caps and  boolean minimization
 
     Arguments:
         cls: classifier
         capacities: switch capacities
+        use_resolution: use resolution technique? (slower)
 
     Returns:
         The number of rules per node or None if method has failed
@@ -212,7 +214,7 @@ def boolean_minimization(cls, capacities):
     """
     result = []
     for c in capacities:
-        here, cls = _bm_place_one(cls, c)
+        here, cls = _bm_place_one(cls, c, use_resolution)
 
         if here is None:
             return None

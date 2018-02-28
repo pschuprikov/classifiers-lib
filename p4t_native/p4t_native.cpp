@@ -169,13 +169,13 @@ void p4t::pylog(string msg) {
     python_log()->info(msg);
 }
 
-auto p4t::split(py::object classifier, int capacity) -> py::object {
+auto p4t::split(py::object classifier, int capacity, bool use_resolution) -> py::object {
     auto const rules = svmr2rules(classifier);
 
     bool success;
     vector<Rule> here, there;
 
-    std::tie(success, here, there) = perform_best_splitting(rules, capacity);
+    std::tie(success, here, there) = perform_best_splitting(rules, capacity, use_resolution);
 
     if (!success) {
         return py::make_tuple(py::object(), rules2svmr(rules));
@@ -184,9 +184,9 @@ auto p4t::split(py::object classifier, int capacity) -> py::object {
     return py::make_tuple(rules2svmr(here), rules2svmr(there));
 }
 
-auto p4t::try_boolean_minimization(py::object classifier) -> py::object {
+auto p4t::try_boolean_minimization(py::object classifier, bool use_resolution) -> py::object {
     auto const rules = svmr2rules(classifier);
-    auto const result = boolean_minimization::perform_boolean_minimization(rules, true);
+    auto const result = boolean_minimization::perform_boolean_minimization(rules, true, use_resolution);
     return rules2svmr(result);
 }
 

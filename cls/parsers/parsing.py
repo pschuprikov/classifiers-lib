@@ -136,5 +136,5 @@ def read_classifier(clsf_format, lines):
     vmr = SimpleVMR(clsf_format.width)
     for i, line in enumerate(lines):
         for flt in clsf_format(line):
-            vmr.append(SimpleVMREntry(flt.value, flt.mask, i + 1, 0))
+            vmr.append(SimpleVMREntry(flt.value, flt.mask, i + 1, 0, length=clsf_format.width))
     return BasicClassifier(vmr)

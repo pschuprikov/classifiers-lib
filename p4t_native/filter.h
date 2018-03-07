@@ -26,8 +26,8 @@ public:
         assert(width_ <= MAX_WIDTH);
 
         for (auto i = 0u; i < width_; i++) {
-            value_.set(i, py::extract<bool>(svmr.attr("value")[i]));
-            mask_.set(i, py::extract<bool>(svmr.attr("mask")[i]));
+            value_.set(i, (bool)(svmr.attr("value")[i]));
+            mask_.set(i, (bool)(svmr.attr("mask")[i]));
         }
     }
 

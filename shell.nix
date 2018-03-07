@@ -2,7 +2,7 @@ with import <nixpkgs> {};
 with pkgs.python3Packages;
 
 let psc_python = python3.withPackages (pkgs: [
-      pytest bitstring pytestrunner ipython
+      pytest pytestrunner ipython numpy
     ]);
     psc_boost = pkgs.boost.override { python = python3; };
 in pkgs.stdenv.mkDerivation rec {

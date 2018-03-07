@@ -74,9 +74,7 @@ auto try_backward_subsumption(vector<Rule> const& rules, bool is_default_nop) {
                             && rule.action() != other.action());
             }
         );
-        if (candidate != end(rules) 
-                && Filter::subsums(candidate->filter(), it->filter())
-                    && candidate->action() == it->action()) {
+        if (candidate != end(rules) && candidate->action() == it->action()) {
             active.erase(it.base() - begin(rules) - 1);
         } 
         if (is_default_nop && it->action() == Action::nop() && candidate == end(rules)) {

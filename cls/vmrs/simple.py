@@ -1,11 +1,12 @@
 from collections import namedtuple
 
-from bitstring import Bits
+import numpy as np
 
 from cls.vmrs.abstract import AbstractVMR
 
 
-class SimpleVMREntry(namedtuple('SVMREntry', ['value', 'mask', 'action', 'priority'])):
+class SimpleVMREntry(namedtuple('SVMREntry',
+                                ['value', 'mask', 'action', 'priority'])):
     """A target independent vmr entry representation.
 
     Attributes:
@@ -15,16 +16,14 @@ class SimpleVMREntry(namedtuple('SVMREntry', ['value', 'mask', 'action', 'priori
         priority: Entry priority (if needed).
     """
 
-    __slots__ = ()
-
     def __new__(cls, value, mask, action, priority, length=None):
         """Construct VMREntry using optional bit length.
         Note, that if the length has been supplied, then value and mask are automatically
         converted to a required format.
 
         Args:
-            value: The value to be matched against (an instance of bitstring.Bits).
-            mask: The mask to be applied when matching (an instance of bitstring.Bits).
+            value: The value to be matched against
+            mask: The mask to be applied when matching
             action: Action to be executed on match.
             priority: Entry priority (if needed)
             length: Optional bit length.
@@ -73,15 +72,16 @@ def to_bits(value, length):
         length: Bit length of the value.
     """
     if isinstance(value, str):
-        return Bits(bytes=value)[-length:]
+        ints = np.fromstring(value, dtype=np.uint8)
+        return np.unpackbits(ints)[:length].astype(dtype=np.bool)
     elif isinstance(value, int):
-        return Bits(int=value, length=length)
-    elif isinstance(value, Bits):
+        return np.unpackbits(np.array([value]))[:length].astype(dtype=np.bool)
+    elif isinstance(value, np.ndarray) and value.dtype is np.bool:
         _check_lengths_match(length, len(value))
         return value
     elif isinstance(value, list):
         _check_lengths_match(length, len(value))
-        return Bits(value)
+        return np.array(value, dtype=bool)
     else:
         raise TypeError("Value {:s} is of unsupported type: {:s}".format(value, type(value)))
 

@@ -1,6 +1,6 @@
 with import <nixpkgs> {};
 
-let boost = pkgs.boost.override { python = pkgs.python3; };
+let boost = pkgs.boost163.override { python = pkgs.python3; };
 in pkgs.stdenv.mkDerivation {
   name = "p4t_native";
 

@@ -24,7 +24,7 @@ setup(
     license='Apache-2.0',
     packages=find_packages(exclude=['test*']),
     ext_modules=[p4t_native],
-    install_requires=['bitstring', 'oct2py', 'click', 'numpy', 'scipy'],
+    install_requires=['oct2py', 'click', 'numpy', 'scipy'],
     setup_requires=['pytest-runner'],
     tests_require=['pytest']
 )

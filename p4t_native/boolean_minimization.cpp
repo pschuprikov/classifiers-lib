@@ -67,12 +67,19 @@ auto try_backward_subsumption(vector<Rule> const& rules, bool is_default_nop) {
     }
 
     for (auto it = rbegin(rules); it != rend(rules); ++it) {
-        auto const isect = find_first_intersection(*it, it.base(), end(rules));
-        auto const subsum = find_first_subsums(*it, it.base(), end(rules));
-        if (std::distance(subsum, isect) > 0) {
+        auto const candidate = std::find_if(it.base(), end(rules),
+            [rule=*it] (auto const& other) {
+                return Filter::subsums(other.filter(), rule.filter()) 
+                    || (Filter::intersect(other.filter(), rule.filter()) 
+                            && rule.action() != other.action());
+            }
+        );
+        if (candidate != end(rules) 
+                && Filter::subsums(candidate->filter(), it->filter())
+                    && candidate->action() == it->action()) {
             active.erase(it.base() - begin(rules) - 1);
-        }
-        if (is_default_nop && it->action() == Action::nop() && isect == end(rules)) {
+        } 
+        if (is_default_nop && it->action() == Action::nop() && candidate == end(rules)) {
             active.erase(it.base() - begin(rules) - 1);
         }
     }

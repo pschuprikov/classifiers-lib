@@ -6,5 +6,5 @@ in pkgs.stdenv.mkDerivation {
 
   src = ./.;
 
-  buildInputs = with pkgs; [ cmake python3 boost gperftools ];
+  buildInputs = with pkgs; [ cmake python3 boost gperftools pkgs.gcc7 ];
 }

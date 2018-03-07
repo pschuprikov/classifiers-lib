@@ -4,6 +4,8 @@
 #include "rule.h"
 #include "filter.h"
 
+#include <ctime>
+
 namespace p4t {
 
 
@@ -57,6 +59,22 @@ inline auto rules2svmr(vector<Rule> const& rules) {
     }
     return result;
 }
+
+struct Timer {
+    Timer (string command) 
+        : start_time_{std::clock()}, command_{std::move(command)} {
+    }
+
+    ~Timer() {
+        log()->info("execution of {} took {} seconds", 
+                    command_, (std::clock() - start_time_) / CLOCKS_PER_SEC);
+    }
+    
+private:
+    std::clock_t start_time_;
+    string const command_;
+};
+
 
 }
 

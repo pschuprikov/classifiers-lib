@@ -66,8 +66,10 @@ struct Timer {
     }
 
     ~Timer() {
-        log()->info("execution of {} took {} seconds", 
-                    command_, (std::clock() - start_time_) / CLOCKS_PER_SEC);
+        log()->info(
+            "execution of {} took {} ms", 
+            command_, (std::clock() - start_time_) * 1000.0 / CLOCKS_PER_SEC
+        );
     }
     
 private:

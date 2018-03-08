@@ -1,5 +1,7 @@
 #include "boolean_minimization.h"
 
+#include "utils.h"
+
 namespace {
 
 using namespace p4t;
@@ -61,6 +63,7 @@ auto check_no_intersection_with(
 }
 
 auto try_backward_subsumption(vector<Rule> const& rules, bool is_default_nop) {
+    Timer t("backward subsumption");
     set<int> active;
     for (auto i = 0; i < int(rules.size()); ++i) {
         active.insert(i);

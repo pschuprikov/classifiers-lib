@@ -19,16 +19,9 @@ public:
     using BitArray = PackedBitArray<uint64_t, MAX_WIDTH>;
     
 public:
-    Filter() = default;
-
-    Filter(py::object svmr)
-        : value_{}, mask_{}, width_{size_t(len(svmr.attr("value")))} {
+    explicit Filter(size_t width) 
+        : value_{}, mask_{}, width_{width} {
         assert(width_ <= MAX_WIDTH);
-
-        for (auto i = 0u; i < width_; i++) {
-            value_.set(i, (bool)(svmr.attr("value")[i]));
-            mask_.set(i, (bool)(svmr.attr("mask")[i]));
-        }
     }
 
     auto size() const {
@@ -60,6 +53,14 @@ public:
             res |= mask.chunk(i) & ~mask_.chunk(i);
         }
         return res;
+    }
+
+    auto const value() const {
+        return value_;
+    }
+
+    auto const mask() const {
+        return mask_;
     }
 
 public:

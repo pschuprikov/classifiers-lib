@@ -3,10 +3,11 @@
 #include <numeric>
 #include <map>
 #include <omp.h>
+#include <unordered_set>
 
 #include "filter.h"
 #include "support.h"
-#include "utils.h"
+#include "python_utils.h"
 
 #include "chain_algos.h"
 #include "oi_algos.h"

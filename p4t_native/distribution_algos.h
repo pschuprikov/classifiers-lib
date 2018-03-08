@@ -1,4 +1,4 @@
-#ifndef DISTRIBUTION_AGLOS_H
+#ifndef DISTRIBUTION_ALGOS_H
 #define DISTRIBUTION_ALGOS_H
 
 #include "rule.h"

@@ -1,6 +1,6 @@
 #include "boolean_minimization.h"
 
-#include "utils.h"
+#include "timer.h"
 
 namespace {
 

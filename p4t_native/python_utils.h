@@ -1,18 +1,33 @@
-#ifndef UTILS_H
-#define UTILS_H
+#ifndef PYTHON_UTILS_H
+#define PYTHON_UTILS_H
 
 #include "rule.h"
 #include "filter.h"
 
+#include <boost/python.hpp>
 #include <ctime>
 
 namespace p4t {
 
+namespace py = boost::python;
+
+inline auto svmr_entry2filter(py::object const& entry) {
+    auto const width = len(entry.attr("value"));
+    Filter result(width);
+    for (auto i = 0u; i < width; i++) {
+        if (!entry.attr("mask")[i]) {
+            result.set(i, Bit::ANY);
+        } else {
+            result.set(i, entry.attr("value")[i] ? Bit::ONE : Bit::ZERO);
+        }
+    }
+    return result;
+}
 
 inline auto svmr2filters(py::object const& svmr) {
     vector<Filter> filters{};
     for (auto i = 0; i < len(svmr); i++) {
-        filters.emplace_back(Filter(svmr[i]));
+        filters.emplace_back(svmr_entry2filter(svmr[i]));
     }
 
     return filters;
@@ -27,7 +42,7 @@ inline auto svmr2rules(py::object const& svmr) {
         } else {
             action = Action{py::extract<int>(svmr[i].attr("action"))};
         }
-        rules.emplace_back(Filter(svmr[i]), action);
+        rules.emplace_back(svmr_entry2filter(svmr[i]), action);
     }
     return rules;
 }
@@ -59,24 +74,6 @@ inline auto rules2svmr(vector<Rule> const& rules) {
     }
     return result;
 }
-
-struct Timer {
-    Timer (string command) 
-        : start_time_{std::clock()}, command_{std::move(command)} {
-    }
-
-    ~Timer() {
-        log()->info(
-            "execution of {} took {} ms", 
-            command_, (std::clock() - start_time_) * 1000.0 / CLOCKS_PER_SEC
-        );
-    }
-    
-private:
-    std::clock_t start_time_;
-    string const command_;
-};
-
 
 }
 

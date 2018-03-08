@@ -3,7 +3,11 @@
 
 #include "common.h"
 
+#include <boost/python.hpp>
+
 namespace p4t {
+
+namespace py = boost::python;
 
 auto min_pmgr(py::object classifier) -> py::object;
 auto min_bmgr1_w_expansions(py::object classifier, int max_expanded_bits) -> py::object;

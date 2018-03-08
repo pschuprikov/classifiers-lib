@@ -42,7 +42,7 @@ public:
             } break;
             case Bit::ZERO: {
                 mask_.set(i, true);
-                value_.set(i, true);
+                value_.set(i, false);
             } break;
         }
     }

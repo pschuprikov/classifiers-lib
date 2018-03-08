@@ -83,6 +83,7 @@ auto construct_dilworths_mates(vector<Support> const& ss) {
     return mate;
 }
 
+[[maybe_unused]]
 auto find_max_antichain(vector<Support> const& ss) -> vector<size_t> {
     using VD = graph_traits<AntichainGraph>::vertex_descriptor;
     auto const mate = construct_dilworths_mates(ss);
@@ -119,6 +120,7 @@ auto find_max_antichain(vector<Support> const& ss) -> vector<size_t> {
     return result;
 }
 
+[[maybe_unused]]
 auto calc_memory_increase(size_t s1_idx, size_t s2_idx, vector<Support> const& ss, vector<int> const& weights) {
     auto const res = get_union(ss[s1_idx], ss[s2_idx]);
     return ((long long) weights[s1_idx]) * ((1ll << (res.size() - ss[s1_idx].size())) - 1)

@@ -47,6 +47,14 @@ inline auto is_in_conflict(Support const& lhs, Support const& rhs) {
     return !is_subset(lhs, rhs) && !is_subset(rhs, lhs);
 }
 
+inline auto get_intersection(Support const& lhs, Support const& rhs) {
+    Support result{};
+    std::set_intersection(
+        begin(lhs), end(lhs), begin(rhs), end(rhs), back_inserter(result)
+    );
+    return result;
+}
+
 inline auto get_union(Support const& rhs, Support const& lhs) -> Support {
     Support result{};
     set_union(begin(rhs), end(rhs), begin(lhs), end(lhs), back_inserter(result));

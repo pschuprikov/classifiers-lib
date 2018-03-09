@@ -50,6 +50,7 @@ auto calc_bit_stats(vector<Filter> const& filters, vector<int> const& bits_in_us
     return stats;
 }
 
+[[maybe_unused]]
 auto is_oi(vector<Filter> const& filters, vector<int> const& bits_in_use) {
     vector<int> indices(filters.size());    
     iota(begin(indices), end(indices), 0);

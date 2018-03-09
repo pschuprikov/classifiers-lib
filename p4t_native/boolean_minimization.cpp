@@ -1,10 +1,14 @@
 #include "boolean_minimization.h"
 
 #include "timer.h"
+#include "intersections_opt.h"
+
+#include <unordered_map>
 
 namespace {
 
 using namespace p4t;
+using namespace boolean_minimization;
 
 template<class Container, class Indices> 
 auto subset(Container const& c, Indices const& indices) {
@@ -16,6 +20,7 @@ auto subset(Container const& c, Indices const& indices) {
 }
 
 auto try_forward_subsumption(vector<Rule> const& rules)  {
+    Timer t("forward subsumption");
     set<int> active;
     for (auto i = 0; i < int(rules.size()); i++) {
         active.insert(i);
@@ -62,13 +67,16 @@ auto check_no_intersection_with(
     return find_first_intersection(rule, first, beyond) != beyond;
 }
 
+
 auto try_backward_subsumption(vector<Rule> const& rules, bool is_default_nop) {
     Timer t("backward subsumption");
+
     set<int> active;
     for (auto i = 0; i < int(rules.size()); ++i) {
         active.insert(i);
     }
 
+    auto total_checked = 0ll; 
     for (auto it = rbegin(rules); it != rend(rules); ++it) {
         auto const candidate = std::find_if(it.base(), end(rules),
             [rule=*it] (auto const& other) {
@@ -77,6 +85,7 @@ auto try_backward_subsumption(vector<Rule> const& rules, bool is_default_nop) {
                             && rule.action() != other.action());
             }
         );
+        total_checked += distance(it.base(), candidate);
         if (candidate != end(rules) && candidate->action() == it->action()) {
             active.erase(it.base() - begin(rules) - 1);
         } 
@@ -84,6 +93,67 @@ auto try_backward_subsumption(vector<Rule> const& rules, bool is_default_nop) {
             active.erase(it.base() - begin(rules) - 1);
         }
     }
+    std::cerr << "total checked: " << total_checked << "\n";
+
+    return subset(rules, active);
+}
+
+[[maybe_unused]]
+auto try_new_backward_subsumption(vector<Rule> const& rules, bool is_default_nop) {
+    auto t = Timer("new backward subsumption");
+
+    set<int> active;
+    for (auto i = 0; i < int(rules.size()); ++i) {
+        active.insert(i);
+    }
+
+    auto [data, matches] = PreprocessingData::build(rules);
+
+    auto total_checked = 0ll; 
+    for (auto base_mask: data.masks()) {
+        for (auto it = rbegin(rules); it != rend(rules); ++it) {
+            auto const cur_rid = it.base() - begin(rules) - 1;
+            auto const cur_val = it->filter().value() & base_mask;
+            if (it->filter().mask() == base_mask) {
+                auto conflicting = id_none;
+                auto subsumming = id_none;
+                for (auto mid = 0u; mid < data.masks().size(); ++mid) {
+                    auto const cur_mask = data.masks()[mid];
+                    auto [lb, ub] = matches[mid].equal_range(cur_mask & cur_val);
+                    for (auto id_it = lb; id_it != ub; ++id_it) {
+                        total_checked++;
+                        if (is_zero(cur_mask - base_mask) 
+                                && id_it->second.second == it->action()) {
+                            subsumming = std::min(subsumming, id_it->second.first);
+                        }
+                        if (id_it->second.second != it->action()) {
+                            conflicting = std::min(conflicting, id_it->second.first); 
+                        }
+                    }
+                }
+
+                if (subsumming != id_none 
+                        && (conflicting == id_none || conflicting > subsumming)) {
+                    active.erase(cur_rid);
+                }
+                if (is_default_nop && it->action() == Action::nop() 
+                        && conflicting == id_none) {
+                    active.erase(cur_rid);
+                }
+            }
+
+            auto const cur_mid = data.get_rule_mid(cur_rid);
+            matches[cur_mid].emplace(
+                it->filter().mask() & cur_val, make_pair(cur_rid, it->action())
+            );
+        }
+        for (auto& m: matches) {
+            m.clear();
+        }
+    }
+    std::cerr << "total checked: " << total_checked << "\n";
+
+
 
     return subset(rules, active);
 }
@@ -122,7 +192,8 @@ auto try_resolution(vector<Rule> const& rules) {
 
 } // namespace
 
-auto p4t::boolean_minimization::perform_boolean_minimization(vector<Rule> rules, bool is_default_nop, bool use_resolution) 
+auto p4t::boolean_minimization::perform_boolean_minimization(
+        vector<Rule> rules, bool is_default_nop, bool use_resolution) 
         -> vector<Rule> {
     
     auto previous_size = rules.size(); 
@@ -178,4 +249,3 @@ auto p4t::boolean_minimization::calc_obstruction_weights(vector<Rule> const& rul
     }
     return result;
 }
-

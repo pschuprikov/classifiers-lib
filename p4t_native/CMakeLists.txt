@@ -5,7 +5,8 @@ project(p4t_native)
 find_package(OpenMP)
 
 set(CMAKE_CXX_FLAGS 
-    "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -std=c++17 -Wall -Werror -O2")
+    "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -std=c++17 -Wall -Werror -O3\
+    -msse4.1")
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 find_package(PythonLibs 3.5 REQUIRED)

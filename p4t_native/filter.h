@@ -17,7 +17,7 @@ enum class Bit {
 
 class Filter {
 public:
-    using BitArray = PackedBitArray<u2, MAX_WIDTH>;
+    using BitArray = PackedBitArray<uint64_t, MAX_WIDTH>;
 
 public:
     explicit Filter(size_t width) 

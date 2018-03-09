@@ -77,6 +77,7 @@ auto construct_dilworths_mates(vector<Support> const& ss) {
     add_dilworths_edges(ss, g);
 
     vector<VD> mate(2 * ss.size());
+    [[maybe_unused]]
     auto const success = checked_edmonds_maximum_cardinality_matching(g, &mate[0]);
     assert(success);
 

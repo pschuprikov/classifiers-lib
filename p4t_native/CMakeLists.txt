@@ -23,6 +23,7 @@ add_library(p4t_native SHARED
     boolean_minimization.cpp
     expansion_algos.cpp
     distribution_algos.cpp
+    intersections_opt.cpp
     )
 
 set_target_properties(p4t_native PROPERTIES PREFIX "")

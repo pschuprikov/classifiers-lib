@@ -1,9 +1,11 @@
 #ifndef BIT_ARRAY_H
 #define BIT_ARRAY_H
 
-#include <array>
 
-#include <boost/functional/hash.hpp>
+#include "bits_aux.h"
+#include "hashing_aux.h"
+
+#include <array>
 
 namespace p4t {
 
@@ -20,14 +22,16 @@ public:
 
     void set(size_t i, bool x) {
         if (x) {
-            bits_[i / BITS_PER_CHUNK] |= (static_cast<BitChunk>(1) << (i % BITS_PER_CHUNK));
+            bits_[i / BITS_PER_CHUNK] |= kth_bit<BitChunkT>::value(i % BITS_PER_CHUNK);
         } else {
-            bits_[i / BITS_PER_CHUNK] &= ~(static_cast<BitChunk>(1) << (i % BITS_PER_CHUNK));
+            bits_[i / BITS_PER_CHUNK] &= ~(kth_bit<BitChunkT>::value(i % BITS_PER_CHUNK));
         }
     }
 
     auto get(size_t i) const -> bool {
-        return bits_[i / BITS_PER_CHUNK] & (static_cast<BitChunk>(1) << (i % BITS_PER_CHUNK));
+        return num::testz(
+            bits_[i / BITS_PER_CHUNK] & (kth_bit<BitChunkT>::value(i % BITS_PER_CHUNK))
+        );
     }
 
     auto chunk(size_t i) const {
@@ -45,7 +49,7 @@ private:
 };
 
 template<class BitChunkT, size_t WidthT> 
-inline auto get_intersection(
+inline auto operator&(
         PackedBitArray<BitChunkT, WidthT> const& lhs, 
         PackedBitArray<BitChunkT, WidthT> const& rhs)
         -> PackedBitArray<BitChunkT, WidthT> {
@@ -58,7 +62,7 @@ inline auto get_intersection(
 }
 
 template<class BitChunkT, size_t WidthT> 
-inline auto get_diff(
+inline auto operator-(
         PackedBitArray<BitChunkT, WidthT> const& lhs, 
         PackedBitArray<BitChunkT, WidthT> const& rhs)
         -> PackedBitArray<BitChunkT, WidthT> {
@@ -71,9 +75,48 @@ inline auto get_diff(
 }
 
 template<class BitChunkT, size_t WidthT> 
+inline auto operator~(PackedBitArray<BitChunkT, WidthT> const& arr)
+        -> PackedBitArray<BitChunkT, WidthT> {
+    PackedBitArray<BitChunkT, WidthT> result{};
+    for (auto i = 0u; i < PackedBitArray<BitChunkT, WidthT>::NUM_CHUNKS; i++) {
+        result.chunk(i) = ~arr.chunk(i); 
+    }
+
+    return result;
+}
+
+template<class BitChunkT, size_t WidthT> 
+inline auto operator^(
+        PackedBitArray<BitChunkT, WidthT> const& lhs, 
+        PackedBitArray<BitChunkT, WidthT> const& rhs)
+        -> PackedBitArray<BitChunkT, WidthT> {
+    PackedBitArray<BitChunkT, WidthT> result{};
+    for (auto i = 0u; i < PackedBitArray<BitChunkT, WidthT>::NUM_CHUNKS; i++) {
+        result.chunk(i) = lhs.chunk(i) ^ rhs.chunk(i); 
+    }
+
+    return result;
+}
+
+template<class BitChunkT, size_t WidthT> 
+inline auto operator|(
+        PackedBitArray<BitChunkT, WidthT> const& lhs, 
+        PackedBitArray<BitChunkT, WidthT> const& rhs)
+        -> PackedBitArray<BitChunkT, WidthT> {
+    PackedBitArray<BitChunkT, WidthT> result{};
+    for (auto i = 0u; i < PackedBitArray<BitChunkT, WidthT>::NUM_CHUNKS; i++) {
+        result.chunk(i) = lhs.chunk(i) | rhs.chunk(i); 
+    }
+
+    return result;
+}
+
+
+
+template<class BitChunkT, size_t WidthT> 
 inline auto is_zero(PackedBitArray<BitChunkT, WidthT> const& arr) -> bool {
     for (auto i = 0u; i < PackedBitArray<BitChunkT, WidthT>::NUM_CHUNKS; i++) {
-        if (arr.chunk(i)) {
+        if (!num::testz(arr.chunk(i))) {
             return false;
         }
     }
@@ -84,12 +127,7 @@ template<class BitChunkT, size_t WidthT>
 inline auto operator==(
         PackedBitArray<BitChunkT, WidthT> const& lhs, 
         PackedBitArray<BitChunkT, WidthT> const& rhs) -> bool {
-    for (auto i = 0u; i < PackedBitArray<BitChunkT, WidthT>::NUM_CHUNKS; i++) {
-        if (lhs.chunk(i) != rhs.chunk(i)) {
-            return false;
-        }
-    }
-    return true;
+    return is_zero(lhs ^ rhs);
 }
 
 template<class BitChunkT, size_t WidthT>
@@ -108,7 +146,7 @@ namespace std {
 template<class BitChunkT, size_t WidthT>
 struct hash<p4t::PackedBitArray<BitChunkT, WidthT>> {
     size_t operator()(p4t::PackedBitArray<BitChunkT, WidthT> const& pba) const {
-        return boost::hash<decltype(pba.bits_)>()(pba.bits_);
+        return p4t::hash::hash_array(pba.bits_);
     }
 };
 

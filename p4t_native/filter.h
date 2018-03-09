@@ -1,11 +1,12 @@
 #ifndef FILTER_H
 #define FILTER_H
 
-#include <iterator>
-#include <algorithm>
 
 #include "common.h"
 #include "bit_array.h"
+
+#include <iterator>
+#include <algorithm>
 
 namespace p4t {
 
@@ -16,8 +17,8 @@ enum class Bit {
 
 class Filter {
 public:
-    using BitArray = PackedBitArray<uint64_t, MAX_WIDTH>;
-    
+    using BitArray = PackedBitArray<u2, MAX_WIDTH>;
+
 public:
     explicit Filter(size_t width) 
         : value_{}, mask_{}, width_{width} {
@@ -48,11 +49,12 @@ public:
     }
 
     auto has_any(BitArray const& mask) const -> bool {
-        BitArray::BitChunk res = 0;
         for (auto i = 0u; i < BitArray::NUM_CHUNKS; i++) {
-            res |= mask.chunk(i) & ~mask_.chunk(i);
+            if (!num::testz(mask.chunk(i) & ~mask_.chunk(i))) {
+                return true;
+            }
         }
-        return res;
+        return false;
     }
 
     auto const value() const {
@@ -97,13 +99,13 @@ auto inline p4t::Filter::fast_blocker(
         auto const diff = 
             (f1.value_.chunk(i) ^ f2.value_.chunk(i)) 
             & (mask.chunk(i) & f1.mask_.chunk(i) & f2.mask_.chunk(i));
-        if (diff) {
+        if (!num::testz(diff)) {
             if (first_difference != -1) {
                 return {false, first_difference};
             }
-            auto const idx = __builtin_ctz(diff);
+            auto const idx = num::ctz(diff);
             first_difference = i * BitArray::BITS_PER_CHUNK + idx;
-            if (diff & ~(1 << idx)) {
+            if (!num::testz(diff & ~kth_bit<BitArray::BitChunk>::value(idx))) {
                 return {false, first_difference};
             }
         }
@@ -120,13 +122,13 @@ auto inline p4t::Filter::fast_blocker(
         auto const diff = 
             (f1.value_.chunk(i) ^ f2.value_.chunk(i)) 
             & (f1.mask_.chunk(i) & f2.mask_.chunk(i));
-        if (diff) {
+        if (!num::testz(diff)) {
             if (first_difference != -1) {
                 return {false, first_difference};
             }
-            auto const idx = __builtin_ctz(diff);
+            auto const idx = num::ctz(diff);
             first_difference = i * BitArray::BITS_PER_CHUNK + idx;
-            if (diff & ~(1 << idx)) {
+            if (!num::testz(diff & ~kth_bit<BitArray::BitChunk>::value(idx))) {
                 return {false, first_difference};
             }
         }
@@ -140,8 +142,8 @@ auto inline p4t::Filter::intersect(
     assert(lhs.size() == rhs.size());
 
     for (auto i = 0u; i < BitArray::NUM_CHUNKS; i++) {
-        if ((lhs.value_.chunk(i) ^ rhs.value_.chunk(i)) 
-                & (mask.chunk(i) & lhs.mask_.chunk(i) & rhs.mask_.chunk(i))) {
+        if (!num::testz((lhs.value_.chunk(i) ^ rhs.value_.chunk(i)) 
+                & mask.chunk(i) & lhs.mask_.chunk(i) & rhs.mask_.chunk(i))) {
             return false;
         }
     }
@@ -155,8 +157,8 @@ auto inline p4t::Filter::intersect(Filter const& lhs, Filter const& rhs) -> bool
     assert(lhs.size() == rhs.size());
 
     for (auto i = 0u; i < BitArray::NUM_CHUNKS; i++) {
-        if ((lhs.value_.chunk(i) ^ rhs.value_.chunk(i)) 
-                & (lhs.mask_.chunk(i) & rhs.mask_.chunk(i))) {
+        if (!num::testz((lhs.value_.chunk(i) ^ rhs.value_.chunk(i)) 
+                & lhs.mask_.chunk(i) & rhs.mask_.chunk(i))) {
             return false;
         }
     }
@@ -168,8 +170,8 @@ auto inline p4t::Filter::subsums(Filter const& lhs, Filter const& rhs) -> bool {
     assert(lhs.size() == rhs.size());
 
     for (auto i = 0u; i < BitArray::NUM_CHUNKS; i++) {
-        if (((lhs.value_.chunk(i) ^ rhs.value_.chunk(i)) | ~rhs.mask_.chunk(i)) 
-                & lhs.mask_.chunk(i)) {
+        if (!num::testz(((lhs.value_.chunk(i) ^ rhs.value_.chunk(i)) | ~rhs.mask_.chunk(i)) 
+                & lhs.mask_.chunk(i))) {
             return false;
         }
     }

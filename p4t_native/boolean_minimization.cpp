@@ -93,7 +93,7 @@ auto try_backward_subsumption(vector<Rule> const& rules, bool is_default_nop) {
             active.erase(it.base() - begin(rules) - 1);
         }
     }
-    std::cerr << "total checked: " << total_checked << "\n";
+    log()->info("total checked: {}", total_checked);
 
     return subset(rules, active);
 }
@@ -151,7 +151,7 @@ auto try_new_backward_subsumption(vector<Rule> const& rules, bool is_default_nop
             m.clear();
         }
     }
-    std::cerr << "total checked: " << total_checked << "\n";
+    log()->info("total checked: {}", total_checked);
 
 
 

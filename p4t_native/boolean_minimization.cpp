@@ -114,12 +114,14 @@ auto try_new_backward_subsumption(vector<Rule> const& rules, bool is_default_nop
         for (auto it = rbegin(rules); it != rend(rules); ++it) {
             auto const cur_rid = it.base() - begin(rules) - 1;
             auto const cur_val = it->filter().value() & base_mask;
+            total_checked++;
             if (it->filter().mask() == base_mask) {
                 auto conflicting = id_none;
                 auto subsumming = id_none;
                 for (auto mid = 0u; mid < data.masks().size(); ++mid) {
                     auto const cur_mask = data.masks()[mid];
                     auto [lb, ub] = matches[mid].equal_range(cur_mask & cur_val);
+                    total_checked++;
                     for (auto id_it = lb; id_it != ub; ++id_it) {
                         total_checked++;
                         if (is_zero(cur_mask - base_mask) 

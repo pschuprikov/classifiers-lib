@@ -19,6 +19,73 @@ auto subset(Container const& c, Indices const& indices) {
     return result;
 }
 
+auto try_new_forward_subsumption(vector<Rule> const& rules)  {
+    Timer t("new forward subsumption");
+    set<int> active;
+    for (auto i = 0; i < int(rules.size()); i++) {
+        active.insert(i);
+    }
+
+    auto data = PreprocessingData::build(rules);
+
+    auto total_checked = 0ll; 
+    for (auto base_mask: data.masks()) {
+        std::vector<vector<tuple<PreprocessingData::Mask, id_t>>> isectors(data.masks().size()); 
+
+        std::vector<tuple<Rule, id_t>> bases{};
+
+        for (auto it = begin(rules); it != end(rules); ++it) {
+            total_checked++;
+
+            if (!is_zero(it->filter().mask() - base_mask)) {
+                continue;
+            }
+
+            auto const cur_rid = it - begin(rules);
+            
+            isectors[data.get_rule_mid(cur_rid)].emplace_back(
+                it->filter().value() & it->filter().mask() & base_mask, cur_rid
+            );
+
+            if (it->filter().mask() == base_mask) {
+                bases.emplace_back(*it, cur_rid);
+            }
+        }
+
+        for (auto& res : isectors) {
+            std::sort(begin(res), end(res));
+        }
+
+        for (auto const& [r, cur_rid] : bases) {
+            auto const cur_val = r.filter().value() & base_mask;
+
+            auto subsummed = false;
+            for (auto mid = 0u; mid < data.masks().size(); ++mid) {
+                total_checked++;
+                auto const o_mask = data.masks()[mid];
+                auto const o_val = o_mask & cur_val;
+
+                auto isect_it = std::lower_bound(
+                    begin(isectors[mid]), end(isectors[mid]),
+                    make_tuple(o_val, cur_rid)
+                );
+
+                if (isect_it != begin(isectors[mid]) && std::get<0>(*(isect_it - 1)) == o_val) {
+                    subsummed = true;
+                    break;
+                }
+            }
+
+            if (subsummed) {
+                active.erase(cur_rid);
+            }
+        }
+    }
+
+    return subset(rules, active);
+}
+
+[[maybe_unused]]
 auto try_forward_subsumption(vector<Rule> const& rules)  {
     Timer t("forward subsumption");
     set<int> active;
@@ -108,7 +175,7 @@ auto try_new_backward_subsumption(vector<Rule> const& rules, bool is_default_nop
         active.insert(i);
     }
 
-    auto data = PreprocessingData::build(rules).first;
+    auto data = PreprocessingData::build(rules);
 
     auto total_checked = 0ll; 
 
@@ -229,7 +296,7 @@ auto p4t::boolean_minimization::perform_boolean_minimization(
     auto trying = true;
     while (trying) {
         trying = false;
-        rules = try_forward_subsumption(rules);
+        rules = try_new_forward_subsumption(rules);
         if (update_size(rules.size(), "forward subsumption")) {
             trying = true;
         }

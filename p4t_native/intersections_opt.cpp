@@ -15,26 +15,18 @@ auto PreprocessingData::get_mid(Mask const& m) -> size_t {
         auto new_mid = mask_to_mid_.size();
         mask_to_mid_[m] = new_mid;
         mid_to_mask_.emplace_back(m);
-        mid_counts_.emplace_back(1);
         return new_mid;
     } else {
-        mid_counts_[mid_it->second]++;
         return mid_it->second;
     }
 }
 
-auto PreprocessingData::build(vector<Rule> const& rules) 
-        -> pair<PreprocessingData, MutableData> {
-    Timer t("building preprocessed data");
+auto PreprocessingData::build(vector<Rule> const& rules) -> PreprocessingData {
     PreprocessingData result{};
     for (auto const& rule : rules) {
         result.add_rule(rule);
     }
-    auto mut_data = MutableData(result.masks().size());
-    for (auto i = 0u; i < mut_data.size(); i++) {
-        mut_data[i].rehash(result.get_mid_counts()[i]);
-    }
-    return make_pair(std::move(result), std::move(mut_data));
+    return std::move(result);
 }
 
 }

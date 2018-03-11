@@ -130,6 +130,28 @@ inline auto operator==(
     return is_zero(lhs ^ rhs);
 }
 
+template<class BitChunkT, size_t WidthT> 
+inline auto operator!=(
+        PackedBitArray<BitChunkT, WidthT> const& lhs, 
+        PackedBitArray<BitChunkT, WidthT> const& rhs) -> bool {
+    return !(lhs == rhs);
+}
+
+template<class BitChunkT, size_t WidthT> 
+inline auto operator<(
+        PackedBitArray<BitChunkT, WidthT> const& lhs, 
+        PackedBitArray<BitChunkT, WidthT> const& rhs) -> bool {
+    for (auto i = 0u; i < PackedBitArray<BitChunkT, WidthT>::NUM_CHUNKS; i++) {
+        if (num::less(lhs.chunk(i), rhs.chunk(i))) {
+            return true;
+        } 
+        if (!num::testz(lhs.chunk(i) ^ rhs.chunk(i))) {
+            return false;
+        }
+    }
+    return false;
+}
+
 template<class BitChunkT, size_t WidthT>
 inline auto popcount(PackedBitArray<BitChunkT, WidthT> const& arr) -> size_t {
     size_t result = 0;

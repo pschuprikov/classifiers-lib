@@ -33,6 +33,10 @@ inline auto ctz(__uint128_t const& x) -> bool {
     return __builtin_ctz(x);
 }
 
+inline auto less(__uint128_t const& lhs, __uint128_t const& rhs) -> bool {
+    return lhs < rhs;
+}
+
 inline auto testz(u2 const &x) -> bool {
     const u2 zero = {0, 0};
     return __builtin_ia32_ptestz128(x, ~zero);
@@ -52,6 +56,10 @@ inline auto testz(uint64_t const &x) -> bool {
 
 inline auto ctz(uint64_t const& x) -> bool {
     return __builtin_ctz(x);
+}
+
+inline auto less(uint64_t x, uint64_t y) -> bool {
+    return x < y;
 }
 
 }

@@ -107,55 +107,72 @@ auto try_new_backward_subsumption(vector<Rule> const& rules, bool is_default_nop
         active.insert(i);
     }
 
-    auto [data, matches] = PreprocessingData::build(rules);
+    auto data = PreprocessingData::build(rules).first;
 
     auto total_checked = 0ll; 
-    for (auto base_mask: data.masks()) {
-        for (auto it = rbegin(rules); it != rend(rules); ++it) {
-            auto const cur_rid = it.base() - begin(rules) - 1;
-            auto const cur_val = it->filter().value() & base_mask;
-            total_checked++;
-            if (it->filter().mask() == base_mask) {
-                auto conflicting = id_none;
-                auto subsumming = id_none;
-                for (auto mid = 0u; mid < data.masks().size(); ++mid) {
-                    auto const cur_mask = data.masks()[mid];
-                    auto [lb, ub] = matches[mid].equal_range(cur_mask & cur_val);
-                    total_checked++;
-                    for (auto id_it = lb; id_it != ub; ++id_it) {
-                        total_checked++;
-                        if (is_zero(cur_mask - base_mask) 
-                                && id_it->second.second == it->action()) {
-                            subsumming = std::min(subsumming, id_it->second.first);
-                        }
-                        if (id_it->second.second != it->action()) {
-                            conflicting = std::min(conflicting, id_it->second.first); 
-                        }
-                    }
-                }
 
-                if (subsumming != id_none 
-                        && (conflicting == id_none || conflicting > subsumming)) {
-                    active.erase(cur_rid);
-                }
-                if (is_default_nop && it->action() == Action::nop() 
-                        && conflicting == id_none) {
-                    active.erase(cur_rid);
+    for (auto base_mask: data.masks()) {
+        std::vector<vector<tuple<Filter::BitArray, id_t, Action>>> isectors(data.masks().size()); 
+        auto const ignore_action_cmp = [](auto const& a, auto const& b) {
+            return make_tuple(std::get<0>(a), std::get<1>(a))
+                < make_tuple(std::get<0>(b), std::get<1>(b));
+        };
+
+        std::vector<tuple<Rule, id_t>> bases{};
+
+        for (auto it = begin(rules); it != end(rules); ++it) {
+            total_checked++;
+            auto const cur_rid = it - begin(rules);
+            isectors[data.get_rule_mid(cur_rid)].emplace_back(
+                it->filter().value() & it->filter().mask() & base_mask, 
+                cur_rid, it->action()
+            );
+            if (it->filter().mask() == base_mask) {
+                bases.emplace_back(*it, cur_rid);
+            }
+        }
+        for (auto& res : isectors) {
+            std::sort(begin(res), end(res), ignore_action_cmp);
+        }
+
+        for (auto const& [r, cur_rid] : bases) {
+            auto const cur_val = r.filter().value() & base_mask;
+
+            auto conflicting = id_none;
+            auto subsumming = id_none;
+            for (auto mid = 0u; mid < data.masks().size(); ++mid) {
+                total_checked++;
+                auto const o_mask = data.masks()[mid];
+                auto const o_val = o_mask & cur_val;
+                auto isect_it = std::upper_bound(
+                    begin(isectors[mid]), end(isectors[mid]),
+                    make_tuple(o_val, cur_rid, 0), ignore_action_cmp
+                );
+                if (isect_it != end(isectors[mid]) && std::get<0>(*isect_it) == o_val) {
+                    if (is_zero(o_mask - base_mask) && std::get<2>(*isect_it) == r.action()) {
+                        subsumming = std::min(std::get<1>(*isect_it), subsumming);
+                    } else {
+                        isect_it = std::find_if(isect_it, end(isectors[mid]), [&] (auto const& x) {
+                            return std::get<0>(x) != o_val || std::get<2>(x) != r.action();
+                        });
+                        if (isect_it != end(isectors[mid]) && std::get<0>(*isect_it) == o_val) {
+                            conflicting = std::min(std::get<1>(*isect_it), conflicting);
+                        };
+                    }
                 }
             }
 
-            auto const cur_mid = data.get_rule_mid(cur_rid);
-            matches[cur_mid].emplace(
-                it->filter().mask() & cur_val, make_pair(cur_rid, it->action())
-            );
-        }
-        for (auto& m: matches) {
-            m.clear();
+            if (subsumming != id_none 
+                    && (conflicting == id_none || conflicting > subsumming)) {
+                active.erase(cur_rid);
+            }
+            if (is_default_nop && r.action() == Action::nop() 
+                    && conflicting == id_none) {
+                active.erase(cur_rid);
+            }
         }
     }
     log()->info("total checked: {}", total_checked);
-
-
 
     return subset(rules, active);
 }
@@ -216,7 +233,7 @@ auto p4t::boolean_minimization::perform_boolean_minimization(
             trying = true;
         }
 
-        rules = try_backward_subsumption(rules, is_default_nop);
+        rules = try_new_backward_subsumption(rules, is_default_nop).size();
         if (update_size(rules.size(), "backward subsumption")) {
             trying = true;
         }

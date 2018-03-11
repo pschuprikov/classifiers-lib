@@ -11,7 +11,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 find_package(PythonLibs 3.5 REQUIRED)
 
-find_package(Boost COMPONENTS python REQUIRED)
+find_package(Boost COMPONENTS python numpy REQUIRED)
 include_directories( ${PYTHON_INCLUDE_DIRS} ${Boost_INCLUDE_DIRES} ${CMAKE_SOURCE_DIR} )
 
 add_library(p4t_native SHARED 

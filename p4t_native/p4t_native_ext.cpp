@@ -1,9 +1,13 @@
 #include <boost/python.hpp>
+#include <boost/python/numpy.hpp>
 
 #include "p4t_native.h"
 
 BOOST_PYTHON_MODULE(p4t_native) {
     using namespace boost::python;
+
+    boost::python::numpy::initialize();
+
 
     def("min_pmgr", p4t::min_pmgr);
     def("best_subgroup", p4t::best_subgroup);

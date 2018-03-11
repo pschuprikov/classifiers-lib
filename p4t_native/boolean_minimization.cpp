@@ -68,6 +68,7 @@ auto check_no_intersection_with(
 }
 
 
+[[maybe_unused]]
 auto try_backward_subsumption(vector<Rule> const& rules, bool is_default_nop) {
     Timer t("backward subsumption");
 
@@ -233,7 +234,7 @@ auto p4t::boolean_minimization::perform_boolean_minimization(
             trying = true;
         }
 
-        rules = try_new_backward_subsumption(rules, is_default_nop).size();
+        rules = try_new_backward_subsumption(rules, is_default_nop);
         if (update_size(rules.size(), "backward subsumption")) {
             trying = true;
         }

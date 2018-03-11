@@ -24,12 +24,16 @@ private:
 };
 
 
-inline auto operator==(Action const& rhs, Action const& lhs) {
+inline auto operator==(Action const& lhs, Action const& rhs) {
     return rhs.code() == lhs.code();
 }
 
-inline auto operator!=(Action const& rhs, Action const& lhs) {
+inline auto operator!=(Action const& lhs, Action const& rhs) {
     return !(rhs == lhs);
+}
+
+inline auto operator<(Action const& lhs, Action const& rhs) {
+    return lhs.code() < rhs.code();
 }
 
 class Rule {

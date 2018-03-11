@@ -15,6 +15,7 @@ find_package(Boost COMPONENTS python REQUIRED)
 include_directories( ${PYTHON_INCLUDE_DIRS} ${Boost_INCLUDE_DIRES} ${CMAKE_SOURCE_DIR} )
 
 add_library(p4t_native SHARED 
+    python_utils.cpp
     common.cpp
     p4t_native.cpp 
     p4t_native_ext.cpp

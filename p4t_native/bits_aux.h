@@ -29,7 +29,7 @@ inline auto testz(__uint128_t const &x) -> bool {
     return x == 0;
 }
 
-inline auto ctz(__uint128_t const& x) -> bool {
+inline auto ctz(__uint128_t const& x) -> size_t {
     return __builtin_ctz(x);
 }
 
@@ -54,8 +54,19 @@ inline auto testz(uint64_t const &x) -> bool {
     return x == 0;
 }
 
-inline auto ctz(uint64_t const& x) -> bool {
-    return __builtin_ctz(x);
+inline auto ctz(uint64_t const& x) -> size_t {
+    static_assert(
+        std::is_same_v<uint64_t, unsigned long long>
+        || 
+        std::is_same_v<uint64_t, unsigned long>, 
+        "Hmm..."
+    );
+
+    if constexpr(std::is_same_v<uint64_t, unsigned long long>) {
+        return __builtin_ctzll(x);
+    } else {
+        return __builtin_ctzl(x);
+    }
 }
 
 inline auto less(uint64_t x, uint64_t y) -> bool {

@@ -14,6 +14,21 @@ auto const calc_set_difference(vector<int> const& lhs, vector<int> const& rhs) {
     return tmp;
 }
 
+void take_filters_subset(
+        vector<Filter> & filters, vector<int> & indices, 
+        vector<int> subset_indices) {
+    vector<int> new_indices{};
+    vector<Filter> new_filters{};
+
+    for (auto i : subset_indices) {
+        new_indices.emplace_back(indices[i]);
+        new_filters.emplace_back(filters[i]);
+    }
+
+    std::swap(indices, new_indices);
+    std::swap(filters, new_filters);
+}
+
 auto find_exact(vector<Filter> const& filters, vector<int> const& bits_in_use) {
     auto exact = bits_in_use;
     for (auto const& filter : filters) {
@@ -57,19 +72,14 @@ auto is_oi(vector<Filter> const& filters, vector<int> const& bits_in_use) {
     vector<bool> has_intersection(filters.size());
 
     auto const mask = bits_to_mask(bits_in_use);
-
-    std::for_each(begin(indices), end(indices),
-        [&filters, &has_intersection, &mask] (auto i) {
-            for (auto j = 0; j < i; j++) {
-                if (Filter::intersect(filters[i], filters[j], mask)) {
-                    has_intersection[i] = true;
-                    break;
-                }
+    for (auto i = begin(filters); i != end(filters); ++i) {
+        for (auto j = begin(filters); j != i; j++) {
+            if (Filter::intersect(*i, *j, mask)) {
+                return false;
             }
         }
-    );
-
-    return std::find(begin(has_intersection), end(has_intersection), true) == end(has_intersection);
+    }
+    return true;
 }
 
 auto find_blockers(vector<Filter> const& filters, vector<int> const& bits_in_use) {
@@ -90,6 +100,7 @@ auto find_blockers(vector<Filter> const& filters, vector<int> const& bits_in_use
 
                 if (res.second == -1) {
                     blockers[i].assign(blockers[i].size(), true);
+                    log()->warn("Found intersecting");
                     break;
                 } else if (res.first) {
                     blockers[i][res.second] = true;
@@ -144,6 +155,7 @@ auto find_best_bit(
     return find_best_bits(all_bits, try_last, value, cmp_value, 1).front();
 }
 
+[[maybe_unused]]
 auto const check_if_use_dontcare_heuristic(
         vector<int> const& bits_in_use, 
         vector<int> const& bit_num_blockers, size_t l) {
@@ -152,16 +164,9 @@ auto const check_if_use_dontcare_heuristic(
         auto indices_sorted_by_blockers = bits_in_use;
 
         std::sort(begin(indices_sorted_by_blockers), end(indices_sorted_by_blockers), 
-            [&bit_num_blockers](int a, int b) {
-                return bit_num_blockers[b] > bit_num_blockers[a];
+            [&bit_num_blockers] (int a, int b) {
+                return bit_num_blockers[a] < bit_num_blockers[b];
             }
-        );
-
-        log()->info("...blockers: [{:d}, {:d}, {:d}, ..., {:d}]", 
-            bit_num_blockers[indices_sorted_by_blockers[0]], 
-            bit_num_blockers[indices_sorted_by_blockers[1]], 
-            bit_num_blockers[indices_sorted_by_blockers[2]], 
-            bit_num_blockers[indices_sorted_by_blockers[l]]
         );
 
         if (bit_num_blockers[indices_sorted_by_blockers[0]] 
@@ -190,6 +195,7 @@ auto const sum_blockers_by_bit(Blockers const& blockers) {
     return bit_num_blockers;
 }
 
+[[maybe_unused]]
 auto apply_dont_care_heuristic(
         vector<Filter> const& filters, vector<int> const& bits_in_use, 
         BitStats const& stats, bool only_exact, size_t l) 
@@ -199,9 +205,8 @@ auto apply_dont_care_heuristic(
 
     auto const rm_bits = find_best_bits(bits_in_use, only_exact ? stats.exact_bits : vector<int>{}, 
         [&stats](auto b) { 
-            // return make_pair(stats.dontcare[b], std::min(stats.zeros[b], stats.ones[b]));
-            return -std::min(stats.zeros[b], stats.ones[b]);
-        }, std::greater<>(), bits_in_use.size() - l);
+            return std::min(stats.zeros[b], stats.ones[b]);
+        }, std::less<>(), bits_in_use.size() - l);
 
     auto cur_mask = bits_to_mask(bits_in_use);
     for (auto bit : rm_bits) {
@@ -238,22 +243,41 @@ auto apply_dont_care_heuristic(
     return make_tuple(true, rm_bits, oi_indices);
 }
 
+template<class T, class Cmp>
+auto log_best_elements(
+        std::string_view msg, int idx,
+        vector<T> const& xs, Cmp cmp, vector<int> const& bits_in_use) {
+    auto indices = bits_in_use;
+    std::sort(begin(indices), end(indices),
+        [cmp,&xs] (auto a, auto b) {
+            return cmp(xs[a], xs[b]);
+        }
+    );
+    log()->info("...{}: [{:d}, {:d}, {:d}, ..., {:d}]", 
+        msg,
+        xs[indices[0]], xs[indices[1]], xs[indices[2]], xs[indices[idx]]
+    );
+}
+
 auto remove_bits_w_blockers(
         vector<Filter> const filters, vector<int> const& bits_in_use, 
-        BitStats const& stats, bool only_exact, size_t l) -> pair<vector<int>, vector<int>> {
+        BitStats const& stats, bool only_exact, size_t l
+        ) -> pair<vector<int>, vector<int>> {
     auto const blockers = find_blockers(filters, bits_in_use);
     auto const bit_num_blockers = sum_blockers_by_bit(blockers);
 
+    log_best_elements("dontcares", l, 
+            stats.dontcare, std::greater<int>(), bits_in_use);
+    log_best_elements("blockers", l, 
+            bit_num_blockers, std::less<int>(), bits_in_use);
 
-    if (check_if_use_dontcare_heuristic(bits_in_use, bit_num_blockers, l)) {
-        bool success;
-        vector<int> bits_to_remove, oi_indices;
-
-        tie(success, bits_to_remove, oi_indices) = apply_dont_care_heuristic(filters, bits_in_use, stats, only_exact, l);
-        if (success) {
-            return make_pair(bits_to_remove, oi_indices);
-        }
-    }
+    //if (check_if_use_dontcare_heuristic(bits_in_use, bit_num_blockers, l)) {
+    //    auto [success, bits_to_remove, oi_indices] = 
+    //        apply_dont_care_heuristic(filters, bits_in_use, stats, only_exact, l);
+    //    if (success) {
+    //        return make_pair(bits_to_remove, oi_indices);
+    //    }
+    //}
 
     auto const best_bit = find_best_bit(
             bits_in_use, only_exact ? stats.exact_bits : vector<int>{}, 
@@ -334,51 +358,61 @@ auto p4t::best_min_similarity_bits(vector<Filter> const& filters, size_t l) -> v
 
 
 auto p4t::best_to_stay_minme(vector<Filter> filters, size_t l, MinMEMode mode, bool only_exact) -> std::pair<vector<int>, vector<int>> {
-    assert(!filters.empty());
-    log()->info("starting minme; mode: {:d}; only exact: {:b}; total filters: {:d}", mode, only_exact, filters.size());
-
-    vector<int> bits_in_use{};
-    for (auto i = 0u; i < filters[0].size(); i++) {
-        bits_in_use.emplace_back(i);
+    if (filters.empty()) {
+        throw std::invalid_argument(
+            "the set of filters must not be empty to run minme"
+        );
     }
+
+    log()->info(
+        "starting minme; mode: {:d}; only exact: {:b}; total filters: {:d}", 
+        mode, only_exact, filters.size()
+    );
+
+    vector<int> indices(filters.size());
+    iota(begin(indices), end(indices), 0);
+
+    vector<int> bits_in_use(filters[0].size());
+    iota(begin(bits_in_use), end(bits_in_use), 0);
 
     auto exact_bits_in_use = find_exact(filters, bits_in_use);
 
-    vector<int> indices(filters.size());
-    std::iota(begin(indices), end(indices), 0);
+    take_filters_subset(filters, indices, 
+            find_maximal_oi_subset(filters, bits_to_mask(bits_in_use)));
 
-    while (bits_in_use.size() > l || (only_exact && bits_in_use != exact_bits_in_use)) {
+    assert(is_oi(filters, bits_in_use));
+
+    log()->info("We were left with {:d} OI filters", indices.size());
+
+    while (bits_in_use.size() > l 
+               || (only_exact && bits_in_use != exact_bits_in_use)) {
         auto const stats = ::calc_bit_stats(filters, bits_in_use);
 
         vector<int> rm_bits;
         vector<int> oi_indices;
         switch(mode) {
             case MinMEMode::MAX_OI: 
-                tie(rm_bits, oi_indices) = 
-                    remove_bits_oi(filters, bits_in_use, stats, only_exact);
+                tie(rm_bits, oi_indices) = remove_bits_oi(
+                    filters, bits_in_use, stats, only_exact);
                 break;
             case MinMEMode::BLOCKERS:
-                tie(rm_bits, oi_indices) = 
-                    remove_bits_w_blockers(filters, bits_in_use, stats, only_exact, l);
+                tie(rm_bits, oi_indices) = remove_bits_w_blockers(
+                    filters, bits_in_use, stats, only_exact, l);
                 break;
         }
 
         bits_in_use = calc_set_difference(bits_in_use, rm_bits);
 
-        vector<int> new_indices{};
-        vector<Filter> new_filters{};
-
-        for (auto i : oi_indices) {
-            new_indices.emplace_back(indices[i]);
-            new_filters.emplace_back(filters[i]);
-        }
-
-        std::swap(indices, new_indices);
-        std::swap(filters, new_filters);
+        take_filters_subset(filters, indices, oi_indices);
 
         exact_bits_in_use = find_exact(filters, bits_in_use);
 
-        log()->info("bits [{:d}...] have been found; bits left: {:d}; exact bits left: {:d}; entries left: {:d}", rm_bits.front(), bits_in_use.size(), exact_bits_in_use.size(), filters.size());
+        log()->info(
+            "bits [{:d}...] have been found;"
+            " bits left: {:d}; exact bits left: {:d}; entries left: {:d}", 
+            rm_bits.front(), bits_in_use.size(), exact_bits_in_use.size(), 
+            filters.size()
+        );
     }
 
     assert(is_oi(filters, bits_in_use));

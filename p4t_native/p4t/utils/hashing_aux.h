@@ -3,7 +3,7 @@
 
 #include <array>
 
-namespace p4t::hash {
+namespace p4t::utils::hash {
 
 inline auto hash_combine(size_t& result, size_t hash) {
     result ^= hash + 0x9e3779b9 + (result<<6) + (result>>2);

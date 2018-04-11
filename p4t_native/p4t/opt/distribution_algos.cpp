@@ -1,9 +1,12 @@
-#include "boolean_minimization.h"
-
 #include "distribution_algos.h"
 
-auto p4t::perform_best_splitting(vector<Rule> const& rules, int capacity, bool use_resolution) 
-    -> tuple<bool, vector<Rule>, vector<Rule>> {
+#include <p4t/opt/boolean_minimization.h>
+
+
+auto p4t::opt::perform_best_splitting(
+        vector<model::Rule> const& rules, int capacity, bool use_resolution) 
+    -> tuple<bool, vector<model::Rule>, vector<model::Rule>> {
+    using namespace model;
 
     if (int(rules.size()) <= capacity) {
         return make_tuple(true, rules, vector<Rule>{});
@@ -24,7 +27,7 @@ auto p4t::perform_best_splitting(vector<Rule> const& rules, int capacity, bool u
 
 
     for (auto i = first_non_nop; i <= std::min(first_non_nop, int(rules.size())); i++) {
-        if (rules[i].action() == Action::nop()) {
+        if (rules[i].action() == model::Action::nop()) {
             continue;
         }
         vector<Rule> rules_here;

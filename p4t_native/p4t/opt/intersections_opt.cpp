@@ -1,9 +1,8 @@
 #include "intersections_opt.h"
-#include "timer.h"
 
-namespace p4t::boolean_minimization {
+namespace p4t::opt::boolean_minimization {
 
-auto PreprocessingData::add_rule(Rule const& rule) -> size_t {
+auto PreprocessingData::add_rule(model::Rule const& rule) -> size_t {
     auto const mid = get_mid(rule.filter().mask());
     rid_to_mid_.emplace_back(mid);
     return mid;
@@ -21,7 +20,8 @@ auto PreprocessingData::get_mid(Mask const& m) -> size_t {
     }
 }
 
-auto PreprocessingData::build(vector<Rule> const& rules) -> PreprocessingData {
+auto PreprocessingData::build(vector<model::Rule> const& rules) 
+    -> PreprocessingData {
     PreprocessingData result{};
     for (auto const& rule : rules) {
         result.add_rule(rule);

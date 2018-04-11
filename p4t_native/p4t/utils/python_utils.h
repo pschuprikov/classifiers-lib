@@ -1,8 +1,8 @@
 #ifndef PYTHON_UTILS_H
 #define PYTHON_UTILS_H
 
-#include "rule.h"
-#include "filter.h"
+#include <p4t/model/rule.h>
+#include <p4t/model/filter.h>
 
 #include <boost/python.hpp>
 #include <ctime>
@@ -11,10 +11,14 @@ namespace p4t {
 
 namespace py = boost::python;
 
-auto svmr_entry2filter(py::object const& entry) -> Filter;
-auto svmr2filters(py::object const& svmr) -> vector<Filter>;
-auto svmr2rules(py::object const& svmr) -> vector<Rule>; 
-auto rules2svmr(vector<Rule> const& rules) -> py::object;
+}
+
+namespace p4t::utils {
+
+auto svmr_entry2filter(py::object const& entry) -> model::Filter;
+auto svmr2filters(py::object const& svmr) -> vector<model::Filter>;
+auto svmr2rules(py::object const& svmr) -> vector<model::Rule>; 
+auto rules2svmr(vector<model::Rule> const& rules) -> py::object;
 
 }
 

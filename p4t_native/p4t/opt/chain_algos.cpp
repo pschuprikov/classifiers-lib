@@ -15,6 +15,8 @@ using p4t::pair;
 using std::begin;
 using std::end;
 
+using namespace p4t::model;
+
 using MaxMatchingGraph = adjacency_list<vecS, vecS, undirectedS>;
 
 using AntichainGraph = adjacency_list<vecS, vecS, directedS>;
@@ -130,16 +132,19 @@ auto calc_memory_increase(size_t s1_idx, size_t s2_idx, vector<Support> const& s
 
 }
 
-auto p4t::find_min_chain_partition(vector<Support> const& ss) -> vector<vector<Support>> {
+
+auto p4t::opt::find_min_chain_partition(vector<model::Support> const& ss) 
+    -> vector<vector<model::Support>> {
     auto const mate = construct_dilworths_mates(ss);
     return calculate_chains(ss, mate, graph_traits<MaxMatchingGraph>::null_vertex());
 }
 
 
-auto p4t::find_min_bounded_chain_partition(
-        vector<vector<Support>> const& sss, 
+auto p4t::opt::find_min_bounded_chain_partition(
+        vector<vector<model::Support>> const& sss, 
         vector<vector<int>> const& weights, 
-        int max_num_chains) -> vector<vector<vector<Support>>> {
+        int max_num_chains) 
+    -> vector<vector<vector<model::Support>>> {
     using namespace boost;
     
     using std::begin; // confilcts with boost

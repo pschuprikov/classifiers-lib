@@ -7,6 +7,8 @@
 namespace {
 
 using namespace p4t;
+using namespace opt;
+using namespace model;
 
 auto const calc_set_difference(vector<int> const& lhs, vector<int> const& rhs) {
     vector<int> tmp;
@@ -320,7 +322,8 @@ auto remove_bits_oi(
 } // namespace
 
 
-auto p4t::best_min_similarity_bits(vector<Filter> const& filters, size_t l) -> vector<int> {
+auto p4t::opt::best_min_similarity_bits(vector<Filter> const& filters, size_t l) 
+    -> vector<int> {
     assert(!filters.empty());
 
     vector<int> result{};
@@ -357,7 +360,9 @@ auto p4t::best_min_similarity_bits(vector<Filter> const& filters, size_t l) -> v
 
 
 
-auto p4t::best_to_stay_minme(vector<Filter> filters, size_t l, MinMEMode mode, bool only_exact) -> std::pair<vector<int>, vector<int>> {
+auto p4t::opt::best_to_stay_minme(
+    vector<Filter> filters, size_t l, MinMEMode mode, bool only_exact) 
+    -> std::pair<vector<int>, vector<int>> {
     if (filters.empty()) {
         throw std::invalid_argument(
             "the set of filters must not be empty to run minme"
@@ -421,7 +426,9 @@ auto p4t::best_to_stay_minme(vector<Filter> filters, size_t l, MinMEMode mode, b
 }
 
 
-auto p4t::find_maximal_oi_subset(vector<Filter> const& filters, Filter::BitArray const& mask) -> vector<int> {
+auto p4t::opt::find_maximal_oi_subset(
+    vector<Filter> const& filters, Filter::BitArray const& mask) 
+    -> vector<int> {
     log()->info("Looking for a maximal oi subset...");
     vector<int> result{};
 
@@ -442,7 +449,10 @@ auto p4t::find_maximal_oi_subset(vector<Filter> const& filters, Filter::BitArray
     return result;
 }
 
-auto p4t::find_maximal_oi_subset_indices(vector<Filter> const& filters, vector<int> const& indices, Filter::BitArray const& mask) -> vector<int> {
+auto p4t::opt::find_maximal_oi_subset_indices(
+    vector<Filter> const& filters, vector<int> const& indices, 
+    Filter::BitArray const& mask) 
+    -> vector<int> {
     log()->info("Looking for a maximal oi subset...");
     vector<int> result{};
 
@@ -463,7 +473,7 @@ auto p4t::find_maximal_oi_subset_indices(vector<Filter> const& filters, vector<i
     return result;
 }
 
-auto p4t::calc_bit_stats(vector<Filter> const& filters) -> BitStats {
+auto p4t::opt::calc_bit_stats(vector<Filter> const& filters) -> BitStats {
     if (filters.empty()) {
         return BitStats(0);
     }
@@ -472,7 +482,7 @@ auto p4t::calc_bit_stats(vector<Filter> const& filters) -> BitStats {
     return ::calc_bit_stats(filters, bits_in_use);
 }
 
-auto p4t::bits_to_mask(vector<int> const& bits) -> Filter::BitArray {
+auto p4t::opt::bits_to_mask(vector<int> const& bits) -> Filter::BitArray {
     Filter::BitArray res{}; 
     for (auto bit : bits) {
         res.set(bit, true);

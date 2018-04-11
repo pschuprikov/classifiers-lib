@@ -1,7 +1,7 @@
 #ifndef TIMER_H
 #define TIMER_H
 
-namespace p4t {
+namespace p4t::utils {
 
 struct Timer {
     Timer (string command) 

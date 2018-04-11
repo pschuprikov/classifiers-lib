@@ -3,7 +3,7 @@
 
 #include "filter.h"
 
-namespace p4t {
+namespace p4t::model {
 
 class Action {
 public: 
@@ -70,8 +70,8 @@ private:
 namespace std {
 
 template<>
-struct hash<p4t::Action> {
-    size_t operator()(p4t::Action const& action) const {
+struct hash<p4t::model::Action> {
+    size_t operator()(p4t::model::Action const& action) const {
         return static_cast<size_t>(action.code());
     }
 };

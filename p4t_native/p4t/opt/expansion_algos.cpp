@@ -1,7 +1,10 @@
 #include "expansion_algos.h"
-#include "numeric"
+#include <numeric>
 
-namespace p4t {
+namespace {
+
+using namespace p4t;
+using namespace p4t::model;
 
 auto initialize_expansions(vector<Support> const& ss) -> support_map<Support> {
     support_map<Support> expansions{};
@@ -20,9 +23,10 @@ auto get_preimage(support_map<Support> const& map, Support const& elem) -> vecto
     }
     return result;
 }
+
 }
 
-auto p4t::try_expand_chain(
+auto p4t::opt::try_expand_chain(
         vector<Support> chain, 
         vector<Support> const& unique_supports, 
         vector<int> const& weights,

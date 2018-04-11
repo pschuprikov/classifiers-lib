@@ -1,15 +1,13 @@
 #ifndef FILTER_H
 #define FILTER_H
 
-
-#include "common.h"
-#include "bit_array.h"
+#include <p4t/common.h>
+#include <p4t/utils/bit_array.h>
 
 #include <iterator>
 #include <algorithm>
 
-namespace p4t {
-
+namespace p4t::model {
 
 enum class Bit {
     ONE, ZERO, ANY 
@@ -17,7 +15,7 @@ enum class Bit {
 
 class Filter {
 public:
-    using BitArray = PackedBitArray<uint64_t, MAX_WIDTH>;
+    using BitArray = utils::PackedBitArray<uint64_t, MAX_WIDTH>;
 
 public:
     explicit Filter(size_t width) 
@@ -49,8 +47,9 @@ public:
     }
 
     auto has_any(BitArray const& mask) const -> bool {
+        using utils::num::testz;
         for (auto i = 0u; i < BitArray::NUM_CHUNKS; i++) {
-            if (!num::testz(mask.chunk(i) & ~mask_.chunk(i))) {
+            if (!testz(mask.chunk(i) & ~mask_.chunk(i))) {
                 return true;
             }
         }
@@ -88,11 +87,10 @@ private:
     size_t width_;
 };
 
-}
-
-
-auto inline p4t::Filter::fast_blocker(
-        Filter const& f1, Filter const& f2, BitArray const& mask) -> pair<bool, int> {
+auto inline Filter::fast_blocker(
+    Filter const& f1, Filter const& f2, BitArray const& mask) 
+    -> pair<bool, int> {
+    namespace num = utils::num;
 
     auto first_difference = -1;
     for (auto i = 0u; i < BitArray::NUM_CHUNKS; i++) {
@@ -105,7 +103,7 @@ auto inline p4t::Filter::fast_blocker(
             }
             auto const idx = num::ctz(diff);
             first_difference = i * BitArray::BITS_PER_CHUNK + idx;
-            if (!num::testz(diff & ~kth_bit<BitArray::BitChunk>::value(idx))) {
+            if (!num::testz(diff & ~num::kth_bit<BitArray::BitChunk>::value(idx))) {
                 return {false, first_difference};
             }
         }
@@ -114,8 +112,10 @@ auto inline p4t::Filter::fast_blocker(
 }
 
 // TODO: deduplicate
-auto inline p4t::Filter::fast_blocker(
-        Filter const& f1, Filter const& f2) -> pair<bool, int> {
+auto inline Filter::fast_blocker(
+    Filter const& f1, Filter const& f2) 
+    -> pair<bool, int> {
+    namespace num = utils::num;
 
     auto first_difference = -1;
     for (auto i = 0u; i < BitArray::NUM_CHUNKS; i++) {
@@ -128,7 +128,7 @@ auto inline p4t::Filter::fast_blocker(
             }
             auto const idx = num::ctz(diff);
             first_difference = i * BitArray::BITS_PER_CHUNK + idx;
-            if (!num::testz(diff & ~kth_bit<BitArray::BitChunk>::value(idx))) {
+            if (!num::testz(diff & ~num::kth_bit<BitArray::BitChunk>::value(idx))) {
                 return {false, first_difference};
             }
         }
@@ -136,8 +136,10 @@ auto inline p4t::Filter::fast_blocker(
     return {true, first_difference};
 }
 
-auto inline p4t::Filter::intersect(
-        Filter const& lhs, Filter const& rhs, BitArray const& mask) -> bool {
+auto inline Filter::intersect(
+    Filter const& lhs, Filter const& rhs, BitArray const& mask) 
+    -> bool {
+    namespace num = utils::num;
 
     assert(lhs.size() == rhs.size());
 
@@ -152,7 +154,8 @@ auto inline p4t::Filter::intersect(
 }
 
 // TODO: deduplicate
-auto inline p4t::Filter::intersect(Filter const& lhs, Filter const& rhs) -> bool {
+auto inline Filter::intersect(Filter const& lhs, Filter const& rhs) -> bool {
+    namespace num = utils::num;
 
     assert(lhs.size() == rhs.size());
 
@@ -166,7 +169,9 @@ auto inline p4t::Filter::intersect(Filter const& lhs, Filter const& rhs) -> bool
     return true;
 }
 
-auto inline p4t::Filter::subsums(Filter const& lhs, Filter const& rhs) -> bool {
+auto inline Filter::subsums(Filter const& lhs, Filter const& rhs) -> bool {
+    namespace num = utils::num;
+
     assert(lhs.size() == rhs.size());
 
     for (auto i = 0u; i < BitArray::NUM_CHUNKS; i++) {
@@ -177,6 +182,8 @@ auto inline p4t::Filter::subsums(Filter const& lhs, Filter const& rhs) -> bool {
     }
 
     return true;
+}
+
 }
 
 #endif

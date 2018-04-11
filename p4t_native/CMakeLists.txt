@@ -14,18 +14,4 @@ find_package(PythonLibs 3.6 REQUIRED)
 find_package(Boost COMPONENTS python3 numpy3 REQUIRED)
 include_directories( ${PYTHON_INCLUDE_DIRS} ${Boost_INCLUDE_DIRES} ${CMAKE_SOURCE_DIR} )
 
-add_library(p4t_native SHARED 
-    python_utils.cpp
-    common.cpp
-    p4t_native.cpp 
-    p4t_native_ext.cpp
-    chain_algos.cpp
-    oi_algos.cpp
-    boolean_minimization.cpp
-    expansion_algos.cpp
-    distribution_algos.cpp
-    intersections_opt.cpp
-    )
-
-set_target_properties(p4t_native PROPERTIES PREFIX "")
-target_link_libraries(p4t_native ${Boost_LIBRARIES} ${PYTHON_LIBRARIES})
+add_subdirectory(p4t)

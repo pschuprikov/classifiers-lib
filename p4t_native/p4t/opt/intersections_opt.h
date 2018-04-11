@@ -1,7 +1,7 @@
 #ifndef INTERSECTIONS_OPT_H
 #define INTERSECTIONS_OPT_H
 
-#include "rule.h"
+#include <p4t/model/rule.h>
 
 #include <unordered_set>
 #include <unordered_map>
@@ -10,23 +10,23 @@
 namespace std {
 
 template<class BitChunkT, size_t WidthT, class... Other>
-struct hash<tuple<p4t::PackedBitArray<BitChunkT, WidthT>, Other...>> {
+struct hash<tuple<p4t::utils::PackedBitArray<BitChunkT, WidthT>, Other...>> {
     template<class T>
     size_t operator()(T const& pba) const {
-        return p4t::hash::hash_tuple(pba);
+        return p4t::utils::hash::hash_tuple(pba);
     }
 };
 
 }
 
-namespace p4t::boolean_minimization {
+namespace p4t::opt::boolean_minimization {
 
 using id_t = uint32_t;
 static auto const id_none = std::numeric_limits<id_t>::max();
 
 class PreprocessingData {
 public:
-    using Mask = Filter::BitArray;
+    using Mask = model::Filter::BitArray;
 
 public:
     PreprocessingData(PreprocessingData&&) = default;
@@ -39,12 +39,12 @@ public:
         return rid_to_mid_[rid];
     }
 
-    static auto build(vector<Rule> const& rules) -> PreprocessingData;
+    static auto build(vector<model::Rule> const& rules) -> PreprocessingData;
 
 private:
     PreprocessingData() = default;
 
-    auto add_rule(Rule const& rule) -> size_t;
+    auto add_rule(model::Rule const& rule) -> size_t;
     auto get_mid(Mask const& m) -> size_t;
 
 private:

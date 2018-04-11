@@ -1,12 +1,14 @@
-#include "python_utils.h"
-
-#include "timer.h"
+#include <p4t/utils/python_utils.h>
+#include <p4t/utils/timer.h>
 
 #include <boost/python/numpy.hpp>
 
-namespace np = p4t::py::numpy;
+namespace np = boost::python::numpy;
 
-auto p4t::svmr_entry2filter(py::object const& entry) -> Filter {
+auto p4t::utils::svmr_entry2filter(py::object const& entry) -> model::Filter {
+    using model::Filter;
+    using model::Bit;
+
     np::ndarray value = np::from_object(entry.attr("value"));
     np::ndarray mask = np::from_object(entry.attr("mask"));
 
@@ -25,7 +27,9 @@ auto p4t::svmr_entry2filter(py::object const& entry) -> Filter {
     return result;
 }
 
-auto p4t::svmr2filters(py::object const& svmr) -> vector<Filter> {
+auto p4t::utils::svmr2filters(py::object const& svmr) -> vector<model::Filter> {
+    using model::Filter;
+
     vector<Filter> filters{};
     for (auto i = 0; i < len(svmr); i++) {
         filters.emplace_back(svmr_entry2filter(svmr[i]));
@@ -34,8 +38,11 @@ auto p4t::svmr2filters(py::object const& svmr) -> vector<Filter> {
     return filters;
 }
 
-auto p4t::svmr2rules(py::object const& svmr) -> vector<Rule> {
-    Timer t{"from python conversion"};
+auto p4t::utils::svmr2rules(py::object const& svmr) -> vector<model::Rule> {
+    using model::Rule;
+    using model::Action;
+
+    utils::Timer t{"from python conversion"};
     vector<Rule> rules{};
     for (auto i = 0; i < len(svmr); i++) {
         Action action;
@@ -49,8 +56,11 @@ auto p4t::svmr2rules(py::object const& svmr) -> vector<Rule> {
     return rules;
 }
 
-auto p4t::rules2svmr(vector<Rule> const& rules) -> py::object {
-    Timer t{"to python conversion"};
+auto p4t::utils::rules2svmr(vector<model::Rule> const& rules) -> py::object {
+    using model::Bit;
+    using model::Action;
+
+    utils::Timer t{"to python conversion"};
     py::list result{};
     for (auto i = 0; i < int(rules.size()); i++) {
         np::ndarray mask = np::zeros(

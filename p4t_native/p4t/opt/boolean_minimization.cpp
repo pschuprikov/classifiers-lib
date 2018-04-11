@@ -1,14 +1,15 @@
 #include "boolean_minimization.h"
 
-#include "timer.h"
-#include "intersections_opt.h"
+#include <p4t/utils/timer.h>
+#include <p4t/opt/intersections_opt.h>
 
 #include <unordered_map>
 
 namespace {
 
 using namespace p4t;
-using namespace boolean_minimization;
+using namespace p4t::opt::boolean_minimization;
+using namespace p4t::model;
 
 template<class Container, class Indices> 
 auto subset(Container const& c, Indices const& indices) {
@@ -20,7 +21,7 @@ auto subset(Container const& c, Indices const& indices) {
 }
 
 auto try_new_forward_subsumption(vector<Rule> const& rules)  {
-    Timer t("new forward subsumption");
+    utils::Timer t("new forward subsumption");
     set<int> active;
     for (auto i = 0; i < int(rules.size()); i++) {
         active.insert(i);
@@ -87,7 +88,7 @@ auto try_new_forward_subsumption(vector<Rule> const& rules)  {
 
 [[maybe_unused]]
 auto try_forward_subsumption(vector<Rule> const& rules)  {
-    Timer t("forward subsumption");
+    utils::Timer t("forward subsumption");
     set<int> active;
     for (auto i = 0; i < int(rules.size()); i++) {
         active.insert(i);
@@ -137,7 +138,7 @@ auto check_no_intersection_with(
 
 [[maybe_unused]]
 auto try_backward_subsumption(vector<Rule> const& rules, bool is_default_nop) {
-    Timer t("backward subsumption");
+    utils::Timer t("backward subsumption");
 
     set<int> active;
     for (auto i = 0; i < int(rules.size()); ++i) {
@@ -168,7 +169,7 @@ auto try_backward_subsumption(vector<Rule> const& rules, bool is_default_nop) {
 
 [[maybe_unused]]
 auto try_new_backward_subsumption(vector<Rule> const& rules, bool is_default_nop) {
-    auto t = Timer("new backward subsumption");
+    utils::Timer t("new backward subsumption");
 
     set<int> active;
     for (auto i = 0; i < int(rules.size()); ++i) {
@@ -279,7 +280,7 @@ auto try_resolution(vector<Rule> const& rules) {
 
 } // namespace
 
-auto p4t::boolean_minimization::perform_boolean_minimization(
+auto p4t::opt::boolean_minimization::perform_boolean_minimization(
         vector<Rule> rules, bool is_default_nop, bool use_resolution) 
         -> vector<Rule> {
     
@@ -319,8 +320,8 @@ auto p4t::boolean_minimization::perform_boolean_minimization(
     return rules;
 }
 
-auto p4t::boolean_minimization::calc_obstruction_weights(vector<Rule> const& rules) 
-        -> std::unordered_map<Action, int> {
+auto p4t::opt::boolean_minimization::calc_obstruction_weights(
+        vector<Rule> const& rules) -> std::unordered_map<Action, int> {
     std::unordered_map<Action, set<int>> counting_rules;
     for (auto i = begin(rules); i != end(rules); ++i) {
         for (auto j = begin(rules); j != i; ++j) {

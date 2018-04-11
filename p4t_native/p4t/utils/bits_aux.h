@@ -1,8 +1,8 @@
 #ifndef BITS_AUX_H
 #define BITS_AUX_H
 
-#include "common.h"
-#include "hashing_aux.h"
+#include <p4t/common.h>
+#include <p4t/utils/hashing_aux.h>
 
 typedef long long int u2 __attribute__ ((vector_size(16)));
 
@@ -11,19 +11,18 @@ namespace std {
 template<>
 struct hash<u2> {
     auto operator()(u2 const& x) const -> size_t {
+        using p4t::utils::hash::hash_combine;
         using comp = decltype(std::declval<u2>()[0]);
         size_t result = 0;
-        p4t::hash::hash_combine(result, std::hash<comp>()(x[0]));
-        p4t::hash::hash_combine(result, std::hash<comp>()(x[1]));
+        hash_combine(result, std::hash<comp>()(x[0]));
+        hash_combine(result, std::hash<comp>()(x[1]));
         return result;
     }
 };
 
 }
 
-namespace p4t {
-
-namespace num {
+namespace p4t::utils::num {
 
 inline auto testz(__uint128_t const &x) -> bool {
     return x == 0;
@@ -73,8 +72,6 @@ inline auto less(uint64_t x, uint64_t y) -> bool {
     return x < y;
 }
 
-}
-
 template<class T> struct kth_bit {
     static auto value(size_t k) -> T = delete;
 };
@@ -106,7 +103,6 @@ struct kth_bit<uint64_t> {
         return uint64_t(1) << k;
     }
 };
-
 
 }
 

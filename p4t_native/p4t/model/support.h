@@ -5,10 +5,10 @@
 #include <unordered_set>
 #include <boost/functional/hash.hpp>
 
-#include "common.h"
-#include "filter.h"
+#include <p4t/common.h>
+#include <p4t/model/filter.h>
 
-namespace p4t { 
+namespace p4t::model { 
 using Support = vector<int>;
 
 template<class T>

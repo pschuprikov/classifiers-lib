@@ -2,12 +2,12 @@
 #define BIT_ARRAY_H
 
 
-#include "bits_aux.h"
-#include "hashing_aux.h"
+#include <p4t/utils/bits_aux.h>
+#include <p4t/utils/hashing_aux.h>
 
 #include <array>
 
-namespace p4t {
+namespace p4t::utils {
 
 template<class BitChunkT, size_t WidthT>
 struct PackedBitArray {
@@ -22,15 +22,15 @@ public:
 
     void set(size_t i, bool x) {
         if (x) {
-            bits_[i / BITS_PER_CHUNK] |= kth_bit<BitChunkT>::value(i % BITS_PER_CHUNK);
+            bits_[i / BITS_PER_CHUNK] |= num::kth_bit<BitChunkT>::value(i % BITS_PER_CHUNK);
         } else {
-            bits_[i / BITS_PER_CHUNK] &= ~(kth_bit<BitChunkT>::value(i % BITS_PER_CHUNK));
+            bits_[i / BITS_PER_CHUNK] &= ~(num::kth_bit<BitChunkT>::value(i % BITS_PER_CHUNK));
         }
     }
 
     auto get(size_t i) const -> bool {
         return num::testz(
-            bits_[i / BITS_PER_CHUNK] & (kth_bit<BitChunkT>::value(i % BITS_PER_CHUNK))
+            bits_[i / BITS_PER_CHUNK] & (num::kth_bit<BitChunkT>::value(i % BITS_PER_CHUNK))
         );
     }
 
@@ -166,9 +166,9 @@ inline auto popcount(PackedBitArray<BitChunkT, WidthT> const& arr) -> size_t {
 namespace std {
 
 template<class BitChunkT, size_t WidthT>
-struct hash<p4t::PackedBitArray<BitChunkT, WidthT>> {
-    size_t operator()(p4t::PackedBitArray<BitChunkT, WidthT> const& pba) const {
-        return p4t::hash::hash_array(pba.bits_);
+struct hash<p4t::utils::PackedBitArray<BitChunkT, WidthT>> {
+    size_t operator()(p4t::utils::PackedBitArray<BitChunkT, WidthT> const& pba) const {
+        return p4t::utils::hash::hash_array(pba.bits_);
     }
 };
 

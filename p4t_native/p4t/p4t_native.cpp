@@ -5,21 +5,24 @@
 #include <omp.h>
 #include <unordered_set>
 
-#include "filter.h"
-#include "support.h"
-#include "python_utils.h"
+#include <p4t/model/filter.h>
+#include <p4t/model/support.h>
+#include <p4t/utils/python_utils.h>
 
-#include "chain_algos.h"
-#include "oi_algos.h"
-#include "expansion_algos.h"
-#include "distribution_algos.h"
-#include "boolean_minimization.h"
+#include <p4t/opt/chain_algos.h>
+#include <p4t/opt/oi_algos.h>
+#include <p4t/opt/expansion_algos.h>
+#include <p4t/opt/distribution_algos.h>
+#include <p4t/opt/boolean_minimization.h>
 
 #include "p4t_native.h"
 
 namespace {
 
 using namespace p4t;
+using namespace p4t::model;
+using namespace p4t::utils;
+namespace py = p4t::py;
 
 auto map_partition_indices(
         vector<vector<Support>> const& partition, 
@@ -74,6 +77,7 @@ auto svmrs2supports(py::object svmrs) {
 }
 
 } // namespace 
+
 auto p4t::min_pmgr(py::object svmr) -> py::object {
     if (py::len(svmr) == 0) {
         return py::object();
@@ -84,7 +88,7 @@ auto p4t::min_pmgr(py::object svmr) -> py::object {
     auto const supports = to_supports(filters);
     auto const supports_unique = select_unique(supports);
 
-    auto const partition = find_min_chain_partition(supports_unique);
+    auto const partition = opt::find_min_chain_partition(supports_unique);
     auto const partition_indices = map_partition_indices(partition, supports);
 
     return py::make_tuple(to_python(partition), to_python(partition_indices));
@@ -99,7 +103,7 @@ auto p4t::min_bmgr(py::object svmrs, int max_num_groups) -> py::object {
         tie(n_unique_supports[i], n_weights[i]) = select_unique_n_weight(n_supports[i]);
     }
     
-    auto const partitions = find_min_bounded_chain_partition(
+    auto const partitions = opt::find_min_bounded_chain_partition(
         n_unique_supports, n_weights, max_num_groups
     );
 
@@ -115,15 +119,22 @@ auto p4t::best_subgroup(py::object svmr, int l, bool only_exact, string algo) ->
     auto const filters = svmr2filters(svmr);
 
     if (algo == "min_similarity") {
-        auto const bits = best_min_similarity_bits(filters, l);
-        auto const result = find_maximal_oi_subset(filters, bits_to_mask(bits));
+        auto const bits = opt::best_min_similarity_bits(filters, l);
+        auto const result = opt::find_maximal_oi_subset(
+            filters, opt::bits_to_mask(bits)
+        );
 
         return py::make_tuple(to_python(bits), to_python(result));
     } else  if (algo == "icnp_oi" || algo == "icnp_blockers") {
-        auto const minme_mode = algo == "icnp_oi" ? MinMEMode::MAX_OI : MinMEMode::BLOCKERS;
-        auto const bits_n_result = best_to_stay_minme(filters, l, minme_mode, only_exact);
+        auto const minme_mode = algo == "icnp_oi" ? 
+            opt::MinMEMode::MAX_OI : opt::MinMEMode::BLOCKERS;
+        auto const bits_n_result = opt::best_to_stay_minme(
+            filters, l, minme_mode, only_exact
+        );
 
-        return py::make_tuple(to_python(bits_n_result.first), to_python(bits_n_result.second));
+        return py::make_tuple(
+            to_python(bits_n_result.first), to_python(bits_n_result.second)
+        );
     } else {
         return py::object();
     }
@@ -143,13 +154,11 @@ auto p4t::min_bmgr1_w_expansions(py::object classifier, int max_expanded_bits) -
     vector<vector<int>> weights(1);
     tie(unique_supports[0], weights[0]) = select_unique_n_weight(supports);
 
-    auto const chain = find_min_bounded_chain_partition(
+    auto const chain = opt::find_min_bounded_chain_partition(
         unique_supports, weights, 1
     )[0][0];
 
-    vector<Support> chain_w_expansions;
-    support_map<Support> expansions;
-    tie(chain_w_expansions, expansions) = try_expand_chain(
+    auto [chain_w_expansions, expansions] = opt::try_expand_chain(
             chain, unique_supports[0], weights[0], max_expanded_bits);
 
 
@@ -173,10 +182,9 @@ void p4t::pylog(string msg) {
 auto p4t::split(py::object classifier, int capacity, bool use_resolution) -> py::object {
     auto const rules = svmr2rules(classifier);
 
-    bool success;
-    vector<Rule> here, there;
-
-    std::tie(success, here, there) = perform_best_splitting(rules, capacity, use_resolution);
+    auto [success, here, there] = opt::perform_best_splitting(
+        rules, capacity, use_resolution
+    );
 
     if (!success) {
         return py::make_tuple(py::object(), rules2svmr(rules));
@@ -187,13 +195,17 @@ auto p4t::split(py::object classifier, int capacity, bool use_resolution) -> py:
 
 auto p4t::try_boolean_minimization(py::object classifier, bool use_resolution) -> py::object {
     auto const rules = svmr2rules(classifier);
-    auto const result = boolean_minimization::perform_boolean_minimization(rules, true, use_resolution);
+    auto const result = opt::boolean_minimization::perform_boolean_minimization(
+        rules, true, use_resolution
+    );
     return rules2svmr(result);
 }
 
 auto p4t::calc_obstruction_weights(py::object classifier) -> py::object {
-    auto const rules = svmr2rules(classifier);
-    auto const weights = boolean_minimization::calc_obstruction_weights(rules);
+    auto const rules = utils::svmr2rules(classifier);
+    auto const weights = opt::boolean_minimization::calc_obstruction_weights(
+        rules
+    );
     py::dict result{}; 
     for (auto p : weights) {
         result[p.first.code()] = p.second;

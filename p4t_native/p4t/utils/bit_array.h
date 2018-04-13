@@ -29,7 +29,7 @@ public:
     }
 
     auto get(size_t i) const -> bool {
-        return num::testz(
+        return !num::testz(
             bits_[i / BITS_PER_CHUNK] & (num::kth_bit<BitChunkT>::value(i % BITS_PER_CHUNK))
         );
     }

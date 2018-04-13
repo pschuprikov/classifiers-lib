@@ -14,6 +14,7 @@
 #include <p4t/opt/expansion_algos.h>
 #include <p4t/opt/distribution_algos.h>
 #include <p4t/opt/boolean_minimization.h>
+#include <p4t/opt/updates.h>
 
 #include "p4t_native.h"
 
@@ -45,28 +46,6 @@ auto map_partition_indices(
     return result;
 }
 
-auto weight(vector<Support> const& unique_supports, 
-        vector<Support> const& all_supports) -> vector<int> {
-    support_map<int> support_cnt{};
-
-    for (auto const& support : all_supports) {
-        support_cnt[support]++;
-    }
-
-    vector<int> result(unique_supports.size());
-    for (auto i = 0u; i < unique_supports.size(); i++) {
-        result[i] = support_cnt[unique_supports[i]];
-    }
-
-    return result;
-}
-
-auto select_unique_n_weight(vector<Support> const& supports) 
-    -> pair<vector<Support>, vector<int>> {
-    auto const unique = select_unique(supports);
-    auto const weights = weight(unique, supports);
-    return make_pair(unique, weights);
-}
 
 auto svmrs2supports(py::object svmrs) {
     vector<vector<Support>> sss(len(svmrs));
@@ -211,4 +190,21 @@ auto p4t::calc_obstruction_weights(py::object classifier) -> py::object {
         result[p.first.code()] = p.second;
     }
     return result;
+}
+
+auto p4t::incremental_updates(
+        py::object new_classifier, py::list lpm_groups, py::object traditional,
+        int tcam_size) -> int {
+    auto const new_classifier_int = utils::svmr2filters(new_classifier);
+    vector<pair<vector<Filter>, Support>> lpm_groups_int{};
+    for (auto i = 0u; i < len(lpm_groups); ++i) {
+        auto bits = lpm_groups[i].attr("bits");
+        lpm_groups_int.emplace_back(
+            utils::svmr2filters(lpm_groups[i]), 
+            Support(py::stl_input_iterator<int>(bits), py::stl_input_iterator<int>())
+        );
+    }
+    auto const traditional_int = utils::svmr2filters(traditional);
+    return opt::incremental_oi_lpm(
+        new_classifier_int, lpm_groups_int, traditional_int, tcam_size);
 }

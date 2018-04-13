@@ -1,12 +1,15 @@
 add_library(p4t_native SHARED 
     common.cpp
 
+    model/support.cpp
+
     opt/chain_algos.cpp
     opt/oi_algos.cpp
     opt/boolean_minimization.cpp
     opt/expansion_algos.cpp
     opt/distribution_algos.cpp
     opt/intersections_opt.cpp
+    opt/updates.cpp
 
     utils/python_utils.cpp
 

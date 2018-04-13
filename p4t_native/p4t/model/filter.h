@@ -6,12 +6,22 @@
 
 #include <iterator>
 #include <algorithm>
+#include <ios>
 
 namespace p4t::model {
 
 enum class Bit {
     ONE, ZERO, ANY 
 };
+
+inline auto& operator<<(std::ostream& out, Bit b) {
+    switch (b) {
+        case Bit::ONE: return out << "1";
+        case Bit::ZERO: return out << "0";
+        case Bit::ANY: return out << "*";
+        default: abort();
+    }
+}
 
 class Filter {
 public:

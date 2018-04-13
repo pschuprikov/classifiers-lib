@@ -15,13 +15,13 @@ template<class T>
 using support_map = std::unordered_map<Support, T, boost::hash<Support>>;
 using support_set = std::unordered_set<Support, boost::hash<Support>>;
 
-inline auto select_unique(vector<Support> supports) -> vector<Support> {
-    std::sort(begin(supports), end(supports));
-    auto last = std::unique(begin(supports), end(supports));
-    supports.erase(last, end(supports));
+auto select_unique(vector<Support> supports) -> vector<Support>;
 
-    return supports;
-}
+auto weight(vector<Support> const& unique_supports, 
+            vector<Support> const& all_supports) -> vector<int>;
+
+auto select_unique_n_weight(vector<Support> const& supports) 
+    -> pair<vector<Support>, vector<int>>;
 
 inline auto to_support(Filter const& filter) -> Support {
     Support result{};
@@ -58,6 +58,12 @@ inline auto get_intersection(Support const& lhs, Support const& rhs) {
 inline auto get_union(Support const& rhs, Support const& lhs) -> Support {
     Support result{};
     set_union(begin(rhs), end(rhs), begin(lhs), end(lhs), back_inserter(result));
+    return result;
+}
+
+inline auto get_difference(Support const& rhs, Support const& lhs) -> Support {
+    Support result{};
+    set_difference(begin(rhs), end(rhs), begin(lhs), end(lhs), back_inserter(result));
     return result;
 }
 

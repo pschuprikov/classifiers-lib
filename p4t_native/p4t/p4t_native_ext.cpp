@@ -18,4 +18,5 @@ BOOST_PYTHON_MODULE(p4t_native) {
     def("split", p4t::split);
     def("try_boolean_minimization", p4t::try_boolean_minimization);
     def("calc_obstruction_weights", p4t::calc_obstruction_weights);
+    def("incremental_updates", p4t::incremental_updates);
 }

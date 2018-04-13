@@ -2,7 +2,10 @@
 #include <functional>
 #include <parallel/algorithm>
 
+#include <p4t/utils/collections.h>
+
 #include "oi_algos.h"
+
 
 namespace {
 
@@ -19,16 +22,8 @@ auto const calc_set_difference(vector<int> const& lhs, vector<int> const& rhs) {
 void take_filters_subset(
         vector<Filter> & filters, vector<int> & indices, 
         vector<int> subset_indices) {
-    vector<int> new_indices{};
-    vector<Filter> new_filters{};
-
-    for (auto i : subset_indices) {
-        new_indices.emplace_back(indices[i]);
-        new_filters.emplace_back(filters[i]);
-    }
-
-    std::swap(indices, new_indices);
-    std::swap(filters, new_filters);
+    filters = utils::subset(filters, subset_indices);
+    indices = utils::subset(indices, subset_indices);
 }
 
 auto find_exact(vector<Filter> const& filters, vector<int> const& bits_in_use) {

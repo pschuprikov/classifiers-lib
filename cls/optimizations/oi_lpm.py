@@ -167,3 +167,36 @@ def decompose_oi(classifier, max_width, algo, only_exact=False, max_num_groups=N
     p4t_native.log("OI decomposition has completed")
 
     return subclassifiers, classifier
+
+def test_incremental(classifier, max_width, max_num_groups, max_traditional):
+    """ Test incremental updates for a classifier 
+
+    Args:
+        classifier: Test classifier.
+        max_width: Maximal allowed classification width.
+        max_num_groups: Maximal allowed number of groups.
+        max_traditional: Maximal allowed size of traditional representation.
+    
+    Returns:
+        TBD
+    """
+
+    p4t_native.log("Running incremental updates...")
+
+    num_rebuilds = 0
+    num_added, lpm_groups, traditional = 0, [], classifier.subset([])
+    while num_added < len(classifier):
+        num_newly_added = p4t_native.incremental_updates(
+            classifier.subset(range(num_added, len(classifier))), 
+            lpm_groups, traditional, max_traditional
+        )
+        p4t_native.log(
+            f"... so far: {num_added}, current: {num_newly_added}"
+            f" in_trad: {max_traditional- len(traditional)}")
+        
+        num_added += num_newly_added
+        num_rebuilds += 1
+        lpm_groups, traditional = minimize_oi_lpm(
+            classifier.subset(range(num_added)), max_width, 
+            'icnp_blockers', max_num_groups)
+    return num_rebuilds

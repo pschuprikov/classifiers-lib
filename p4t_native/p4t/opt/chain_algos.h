@@ -9,9 +9,9 @@ auto find_min_chain_partition(vector<model::Support> const& ss)
     -> vector<vector<model::Support>>;
 
 auto find_min_bounded_chain_partition(
-        vector<vector<model::Support>> const& sss, 
-        vector<vector<int>> const& weights, 
-        int max_num_chains) -> vector<vector<vector<model::Support>>>;
+    vector<vector<model::Support>> const& sss, 
+    vector<vector<int>> const& weights, 
+    int max_num_chains) -> vector<vector<vector<model::Support>>>;
 }
 
 #endif

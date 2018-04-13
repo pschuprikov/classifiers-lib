@@ -1,5 +1,6 @@
 #include "boolean_minimization.h"
 
+#include <p4t/utils/collections.h>
 #include <p4t/utils/timer.h>
 #include <p4t/opt/intersections_opt.h>
 
@@ -10,15 +11,6 @@ namespace {
 using namespace p4t;
 using namespace p4t::opt::boolean_minimization;
 using namespace p4t::model;
-
-template<class Container, class Indices> 
-auto subset(Container const& c, Indices const& indices) {
-    Container result;
-    for (auto i : indices) {
-        result.emplace_back(c[i]);
-    }
-    return result;
-}
 
 auto try_new_forward_subsumption(vector<Rule> const& rules)  {
     utils::Timer t("new forward subsumption");
@@ -83,7 +75,7 @@ auto try_new_forward_subsumption(vector<Rule> const& rules)  {
         }
     }
 
-    return subset(rules, active);
+    return utils::subset(rules, active);
 }
 
 [[maybe_unused]]
@@ -106,7 +98,7 @@ auto try_forward_subsumption(vector<Rule> const& rules)  {
         }
     }
 
-    return subset(rules, active);
+    return utils::subset(rules, active);
 }
 
 template<class RuleIt>
@@ -164,7 +156,7 @@ auto try_backward_subsumption(vector<Rule> const& rules, bool is_default_nop) {
     }
     log()->info("total checked: {}", total_checked);
 
-    return subset(rules, active);
+    return utils::subset(rules, active);
 }
 
 [[maybe_unused]]
@@ -243,7 +235,7 @@ auto try_new_backward_subsumption(vector<Rule> const& rules, bool is_default_nop
     }
     log()->info("total checked: {}", total_checked);
 
-    return subset(rules, active);
+    return utils::subset(rules, active);
 }
 
 
@@ -274,7 +266,7 @@ auto try_resolution(vector<Rule> const& rules) {
         }
     }
 
-    return subset(rules, active);
+    return utils::subset(rules, active);
 }
 
 

@@ -12,7 +12,7 @@ auto incremental_oi_lpm(
         vector<pair<vector<model::Filter>, model::Support>> groups,
         vector<model::Filter> traditional,
         size_t max_traditional_size
-    ) -> size_t;
+    ) -> pair<size_t, size_t>;
 }
 
 #endif

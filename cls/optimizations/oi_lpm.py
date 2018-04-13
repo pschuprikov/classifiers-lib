@@ -1,4 +1,5 @@
 from itertools import chain, product
+from collections import namedtuple
 
 # TODO avoid this import?
 from cls.vmrs.simple import SimpleVMREntry
@@ -168,6 +169,12 @@ def decompose_oi(classifier, max_width, algo, only_exact=False, max_num_groups=N
 
     return subclassifiers, classifier
 
+
+IncrementalBatchStats = namedtuple(
+        'IncrementalBatchStats', 
+        ('num_lpm', 'num_traditional')
+    )
+
 def test_incremental(classifier, max_width, max_num_groups, max_traditional):
     """ Test incremental updates for a classifier 
 
@@ -178,25 +185,26 @@ def test_incremental(classifier, max_width, max_num_groups, max_traditional):
         max_traditional: Maximal allowed size of traditional representation.
     
     Returns:
-        TBD
+        A list of Incremental Batch Stats
     """
 
     p4t_native.log("Running incremental updates...")
 
-    num_rebuilds = 0
+    incremental_stats = []
     num_added, lpm_groups, traditional = 0, [], classifier.subset([])
     while num_added < len(classifier):
-        num_newly_added = p4t_native.incremental_updates(
+        incremental, traditional = p4t_native.incremental_updates(
             classifier.subset(range(num_added, len(classifier))), 
-            lpm_groups, traditional, max_traditional
-        )
+            lpm_groups, traditional, max_traditional)
+        incremental_stats.append(IncrementalBatchStats(incremental, traditional))
+        num_added += incremental + traditional
         p4t_native.log(
-            f"... so far: {num_added}, current: {num_newly_added}"
-            f" in_trad: {max_traditional- len(traditional)}")
-        
-        num_added += num_newly_added
-        num_rebuilds += 1
-        lpm_groups, traditional = minimize_oi_lpm(
-            classifier.subset(range(num_added)), max_width, 
-            'icnp_blockers', max_num_groups)
-    return num_rebuilds
+            f"... incremental: {incremental}, traditional: {traditional}"
+            f" total: {num_added}, ... {max_traditional}")
+
+        if num_added < len(classifier):
+            lpm_groups, traditional = minimize_oi_lpm(
+                classifier.subset(range(num_added)), max_width, 
+                'icnp_blockers', max_num_groups)
+
+    return incremental_stats

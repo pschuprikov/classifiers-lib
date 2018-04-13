@@ -194,7 +194,7 @@ auto p4t::calc_obstruction_weights(py::object classifier) -> py::object {
 
 auto p4t::incremental_updates(
         py::object new_classifier, py::list lpm_groups, py::object traditional,
-        int tcam_size) -> int {
+        int tcam_size) -> py::tuple {
     auto const new_classifier_int = utils::svmr2filters(new_classifier);
     vector<pair<vector<Filter>, Support>> lpm_groups_int{};
     for (auto i = 0u; i < len(lpm_groups); ++i) {
@@ -205,6 +205,8 @@ auto p4t::incremental_updates(
         );
     }
     auto const traditional_int = utils::svmr2filters(traditional);
-    return opt::incremental_oi_lpm(
-        new_classifier_int, lpm_groups_int, traditional_int, tcam_size);
+    auto const [num_added_groups, num_added_traditional] = 
+        opt::incremental_oi_lpm(new_classifier_int, lpm_groups_int, 
+                                traditional_int, tcam_size);
+    return py::make_tuple(num_added_groups, num_added_traditional);
 }

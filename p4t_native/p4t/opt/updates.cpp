@@ -32,9 +32,10 @@ auto p4t::opt::incremental_oi_lpm(
         vector<model::Filter> const& new_filters,
         vector<pair<vector<model::Filter>, model::Support>> groups,
         vector<model::Filter> traditional,
-        size_t max_traditional_size) -> size_t {
+        size_t max_traditional_size) -> pair<size_t, size_t> {
 
-    auto num_succeded = 0;
+    auto num_added_traditional = 0;
+    auto num_added_groups = 0;
     for (auto const& f : new_filters) {
         bool added = false;
         for (auto& group : groups) {
@@ -52,20 +53,19 @@ auto p4t::opt::incremental_oi_lpm(
             }
             group.first.emplace_back(r_f);
             added = true;
+            num_added_groups++;
             break;
         }
         if (!added && traditional.size() < max_traditional_size) {
             traditional.emplace_back(f);
             added = true;
+            num_added_traditional++;
         }
         
         if (!added) {
-            return num_succeded;
+            break;
         }
-
-        num_succeded++;
     }
 
-    return num_succeded;
+    return {num_added_groups, num_added_traditional};
 }
-

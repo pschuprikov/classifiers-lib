@@ -33,7 +33,7 @@ auto calc_obstruction_weights(py::object classifier) -> py::object;
 
 auto incremental_updates(
         py::object new_classifier, py::list lpm_groups, py::object traditional,
-        int tcam_size) -> int;
+        int tcam_size) -> py::tuple;
 
 }
 

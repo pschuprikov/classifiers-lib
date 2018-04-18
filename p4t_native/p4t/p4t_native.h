@@ -15,8 +15,10 @@ auto min_bmgr1_w_expansions(
         py::object classifier, int max_expanded_bits) -> py::object;
 
 auto min_bmgr(py::object classifiers, int max_num_groups) -> py::object;
+
 auto best_subgroup(
-        py::object classifier, int max_width, bool only_exact, string algo)
+        py::object classifier, int max_width, bool only_exact, 
+        string algo, string max_oi_algo)
     -> py::object;
 
 void set_num_threads(int num_threads);

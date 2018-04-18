@@ -94,21 +94,24 @@ auto p4t::min_bmgr(py::object svmrs, int max_num_groups) -> py::object {
     return py::make_tuple(to_python(partitions), to_python(n_partition_indices));
 }
 
-auto p4t::best_subgroup(py::object svmr, int l, bool only_exact, string algo) -> py::object {
+auto p4t::best_subgroup(
+        py::object svmr, int l, bool only_exact, 
+        string algo, string max_oi_algo) -> py::object {
     auto const filters = svmr2filters(svmr);
+    auto const max_oi_mode = max_oi_algo == "top_down" ?
+        opt::OIMode::TOP_DOWN : opt::OIMode::MIN_DEGREE;
 
     if (algo == "min_similarity") {
         auto const bits = opt::best_min_similarity_bits(filters, l);
         auto const result = opt::find_maximal_oi_subset(
-            filters, opt::bits_to_mask(bits)
+            filters, opt::bits_to_mask(bits), max_oi_mode
         );
-
         return py::make_tuple(to_python(bits), to_python(result));
     } else  if (algo == "icnp_oi" || algo == "icnp_blockers") {
         auto const minme_mode = algo == "icnp_oi" ? 
             opt::MinMEMode::MAX_OI : opt::MinMEMode::BLOCKERS;
         auto const bits_n_result = opt::best_to_stay_minme(
-            filters, l, minme_mode, only_exact
+            filters, l, minme_mode, max_oi_mode, only_exact
         );
 
         return py::make_tuple(

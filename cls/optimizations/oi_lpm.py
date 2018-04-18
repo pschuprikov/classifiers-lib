@@ -1,4 +1,5 @@
 from itertools import chain, product
+from functools import reduce
 from collections import namedtuple
 
 # TODO avoid this import?
@@ -85,8 +86,13 @@ def maximize_coverage_bounded(classifiers, max_num_groups):
     return subclassifiers, traditionals
 
 
-def minimize_oi_lpm(classifier, max_width, algo, max_num_groups,
-                    max_expanded_bits=None, provide_non_expanded=False):
+LPMGroupInfo = namedtuple('LPMGroupInfo', 
+    ['classifier', 'nexp_classifier', 'indices']
+)
+
+def minimize_oi_lpm(classifier, max_width, algo, max_num_groups, *,
+                    max_expanded_bits=None, provide_non_expanded=False,
+                    max_candidate_groups=None):
     """ Minimizes the number of subclassifiers, which are both LPM and OI.
 
     Args:
@@ -96,6 +102,7 @@ def minimize_oi_lpm(classifier, max_width, algo, max_num_groups,
         max_num_groups: Maximal allowed number of subclassifiers.
         max_expanded_bits: Maximal allowed number of expanded bits.
         provide_non_expanded: Whether non-expanded versions should be returned.
+        max_candidate_groups: The total number of candidate groups
 
     Returns:
         Pair of subclassifiers list and classifier with leftover rules. If
@@ -103,44 +110,80 @@ def minimize_oi_lpm(classifier, max_width, algo, max_num_groups,
         a list of non-expanded classifiers.
     """
     assert max_expanded_bits is not None or not provide_non_expanded
+    assert (max_candidate_groups is None or 
+            max_num_groups <= max_candidate_groups)
 
-    subclassifiers = []
-    non_expanded_subclassifiers = []
-    while len(classifier) > 0 and len(subclassifiers) < max_num_groups:
-        p4t_native.log(
-            "OI-LPM has started for group #{:d}".format(len(subclassifiers) + 1))
+    if max_candidate_groups is None:
+        max_candidate_groups = max_num_groups
 
-        oi_bits, oi_indices = p4t_native.best_subgroup(classifier, max_width, False, algo)
-        oi_classifier = classifier.subset(oi_indices).reorder(oi_bits)
+    indices = list(range(len(classifier)))
+    lpm_groups = []
+
+    while len(indices) > 0 and len(lpm_groups) < max_candidate_groups:
+        p4t_native.log(f"OI-LPM has started for group #{len(lpm_groups) + 1}")
+
+        oi_bits, oi_indices = p4t_native.best_subgroup(
+            classifier.subset(indices), max_width, False, algo
+        )
+        oi_classifier = classifier.subset(
+            indices[i] for i in oi_indices
+        ).reorder(oi_bits)
 
         if max_expanded_bits is None:
-            [[bitchain]], [[lpm_indices]] = p4t_native.min_bmgr([oi_classifier], 1)
-            subclassifiers.append(oi_classifier.subset(lpm_indices).reorder(_chain2bits(bitchain, oi_classifier.bit_width)))
+            [[bitchain]], [[lpm_indices]] = p4t_native.min_bmgr(
+                [oi_classifier], 1
+            )
+            group = oi_classifier.subset(lpm_indices).reorder(
+                _chain2bits(bitchain, oi_classifier.bit_width)
+            )
+            nexp_group = None
         else:
             bitchain, lpm_indices, expansions = p4t_native.min_bmgr1_w_expansions(
                 oi_classifier, max_expanded_bits)
 
-            expanded = oi_classifier.subset([])
+            group = oi_classifier.subset([])
             for i, exp in zip(lpm_indices, expansions):
                 for entry in expand(oi_classifier[i], exp):
-                    expanded.vmr.append(entry)
+                    group.vmr.append(entry)
 
             if provide_non_expanded:
-                non_expanded_subclassifiers.append(
-                    oi_classifier.subset(lpm_indices).reorder(
-                        _chain2bits(bitchain, oi_classifier.bit_width)))
+                nexp_group = oi_classifier.subset(lpm_indices).reorder(
+                    _chain2bits(bitchain, oi_classifier.bit_width)
+                )
+            else:
+                nexp_group = None
 
-            subclassifiers.append(expanded.reorder(
-                _chain2bits(bitchain, oi_classifier.bit_width)))
+        current_indices = [indices[oi_indices[i]] for i in lpm_indices]
+        lpm_groups.append(LPMGroupInfo(
+            classifier=group, 
+            nexp_classifier=nexp_group, 
+            indices=current_indices
+        ))
 
-        classifier = classifier.subset(set(range(len(classifier))) - set(oi_indices[i] for i in lpm_indices))
-    
+        indices = sorted(set(indices) - set(current_indices))
+
         p4t_native.log("OI decomposition has finished")
+    
+    lpm_groups.sort(key = lambda x: len(x.indices), reverse=True)
+    selected_groups = lpm_groups[:max_num_groups]
+    rest_indices = set(range(len(classifier))) - reduce(
+        lambda x, y: x | y,
+        (set(x.indices) for x in selected_groups),
+        set()
+    )
 
     if provide_non_expanded:
-        return subclassifiers, classifier, non_expanded_subclassifiers
+        return (
+            [x.classifier for x in selected_groups], 
+            classifier.subset(rest_indices), 
+            [x.nexp_classifier for x in selected_groups]
+        )
     else:
-        return subclassifiers, classifier
+        return (
+            [x.classifier for x in selected_groups], 
+            classifier.subset(rest_indices)
+        )
+
 
 
 def decompose_oi(classifier, max_width, algo, only_exact=False, max_num_groups=None):
@@ -172,7 +215,7 @@ def decompose_oi(classifier, max_width, algo, only_exact=False, max_num_groups=N
 
 IncrementalBatchStats = namedtuple(
         'IncrementalBatchStats', 
-        ('num_lpm', 'num_traditional')
+        ('num_in_groups', 'num_traditional')
     )
 
 def test_incremental(classifier, max_width, max_num_groups, max_traditional):

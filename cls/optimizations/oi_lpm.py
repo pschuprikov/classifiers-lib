@@ -222,7 +222,8 @@ IncrementalBatchStats = namedtuple(
     )
 
 def test_incremental(classifier, max_width, max_num_groups, max_traditional, *,
-                     algo='icnp_blockers', max_oi_algo='min_degree'):
+                     algo='icnp_blockers', max_oi_algo='min_degree',
+                     max_candidate_groups=None):
     """ Test incremental updates for a classifier 
 
     Args:
@@ -231,6 +232,7 @@ def test_incremental(classifier, max_width, max_num_groups, max_traditional, *,
         max_num_groups: Maximal allowed number of groups.
         max_traditional: Maximal allowed size of traditional representation.
         algo: Algorithm to use (Possible values 'icnp_oi', 'incp_blockers', 'min_similarity')
+        max_candidate_groups: The total number of candidate groups
         max_oi_algo: The algorithm used for maximal OI (Possible values
             'top_down' and 'min_degree').
     
@@ -255,6 +257,7 @@ def test_incremental(classifier, max_width, max_num_groups, max_traditional, *,
         if num_added < len(classifier):
             lpm_groups, traditional = minimize_oi_lpm(
                 classifier.subset(range(num_added)), max_width, 
-                algo, max_num_groups, max_oi_algo=max_oi_algo)
+                algo, max_num_groups, max_oi_algo=max_oi_algo,
+                max_candidate_groups=max_candidate_groups)
 
     return incremental_stats

@@ -1,9 +1,7 @@
 #include "common.h"
 #include <spdlog/sinks/sink.h>
 
-namespace {
-
-auto sink() -> std::shared_ptr<spdlog::sinks::sink> const& {
+auto p4t::sink() -> std::shared_ptr<spdlog::sinks::sink> const& {
     static auto initialized = false;    
     static std::shared_ptr<spdlog::sinks::sink> sink{};
 
@@ -14,9 +12,6 @@ auto sink() -> std::shared_ptr<spdlog::sinks::sink> const& {
 
     return sink;
 }
-
-
-};
 
 auto p4t::log() -> std::shared_ptr<spdlog::logger> const& {
     static auto initialized = false;

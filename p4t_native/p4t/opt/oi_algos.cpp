@@ -457,10 +457,9 @@ auto p4t::opt::find_maximal_oi_subset(
 }
 
 auto p4t::opt::find_maximal_oi_subset_indices(
-    vector<Filter> const& filters, vector<int> const& indices, 
-    Filter::BitArray const& mask) 
-    -> vector<int> {
-    log()->info("Looking for a maximal oi subset...");
+        vector<Filter> const& filters, vector<int> const& indices, 
+        Filter::BitArray const& mask)  -> vector<int> {
+    oi_log()->info("Looking for a maximal oi subset...");
     vector<int> result{};
 
     for (auto i : indices) {
@@ -476,7 +475,7 @@ auto p4t::opt::find_maximal_oi_subset_indices(
         }
     }
 
-    log()->info("...Finished");
+    oi_log()->info("...Finished");
     return result;
 }
 

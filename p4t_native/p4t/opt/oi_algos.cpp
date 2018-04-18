@@ -345,13 +345,15 @@ auto find_maximal_oi_subset_degree(
     iota(begin(indices), end(indices), 0);
 
     vector<int> num_edges(filters.size());
-    for (auto i = 0u; i < filters.size(); ++i) {
-        for (auto j = 0u; j < filters.size(); j++) {
-            if (i != j && Filter::intersect(filters[j], filters[i], mask)) {
-                num_edges[i]++;
+    __gnu_parallel::for_each(begin(indices), end(indices),
+        [&filters, &num_edges, mask](auto i) {
+            for (int j = 0; j < int(filters.size()); j++) {
+                if (i != j && Filter::intersect(filters[j], filters[i], mask)) {
+                    num_edges[i]++;
+                }
             }
         }
-    }
+    );
 
     while (!indices.empty()) {
         auto min_idx = *min_element(
@@ -362,26 +364,24 @@ auto find_maximal_oi_subset_degree(
         );
         result.emplace_back(min_idx);
 
-        vector<int> new_indices{};
-        vector<int> removed_indices{};
-        std::partition_copy(
+        auto rm_it = __gnu_parallel::partition(
             begin(indices), end(indices),
-            back_inserter(removed_indices), back_inserter(new_indices),
             [&filters,min_idx,mask] (auto i) {
-                return Filter::intersect(filters[i], filters[min_idx], mask);
+                return !Filter::intersect(filters[i], filters[min_idx], mask);
             }
         );
 
-        std::swap(new_indices, indices);
-        __gnu_parallel::for_each(begin(indices), end(indices),
-            [&removed_indices,&filters,&num_edges,mask] (auto i) { 
-                for (auto ri : removed_indices) {
-                    if (Filter::intersect(filters[i], filters[ri], mask)) {
+        __gnu_parallel::for_each(begin(indices), rm_it,
+            [&filters,&num_edges,mask,beg=rm_it,end=end(indices)] (auto i) { 
+                for (auto it = beg; it != end; ++it) {
+                    if (Filter::intersect(filters[i], filters[*it], mask)) {
                         num_edges[i]--;
                     }
                 }
             }
         );
+
+        indices.erase(rm_it, end(indices));
     }
 
     return result;

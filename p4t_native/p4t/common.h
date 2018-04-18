@@ -25,6 +25,7 @@ using std::tuple;
 using std::make_pair;
 using std::make_tuple;
 
+auto sink() -> std::shared_ptr<spdlog::sinks::sink> const&;
 auto log() -> std::shared_ptr<spdlog::logger> const&;
 auto python_log() -> std::shared_ptr<spdlog::logger> const&;
 

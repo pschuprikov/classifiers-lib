@@ -13,6 +13,19 @@ using namespace p4t;
 using namespace opt;
 using namespace model;
 
+auto oi_log() -> std::shared_ptr<spdlog::logger> const& {
+    static auto initialized = false;
+    static std::shared_ptr<spdlog::logger> logger{};
+
+    if (!initialized) {
+        logger = std::make_shared<spdlog::logger>("oi", sink());
+        logger->flush_on(spdlog::level::warn);
+        logger->set_level(spdlog::level::warn);
+        initialized = true;
+    }
+    return logger;
+}
+
 auto const calc_set_difference(vector<int> const& lhs, vector<int> const& rhs) {
     vector<int> tmp;
     std::set_difference(begin(lhs), end(lhs), begin(rhs), end(rhs), back_inserter(tmp));
@@ -80,7 +93,7 @@ auto is_oi(vector<Filter> const& filters, vector<int> const& bits_in_use) {
 }
 
 auto find_blockers(vector<Filter> const& filters, vector<int> const& bits_in_use) {
-    log()->info("Calculating blockers...");
+    oi_log()->info("Calculating blockers...");
     assert(!filters.empty());
     vector<vector<bool>> blockers(filters.size(), vector<bool>(filters[0].size(), false));
 
@@ -97,7 +110,6 @@ auto find_blockers(vector<Filter> const& filters, vector<int> const& bits_in_use
 
                 if (res.second == -1) {
                     blockers[i].assign(blockers[i].size(), true);
-                    log()->warn("Found intersecting");
                     break;
                 } else if (res.first) {
                     blockers[i][res.second] = true;
@@ -106,7 +118,7 @@ auto find_blockers(vector<Filter> const& filters, vector<int> const& bits_in_use
         }
     );
 
-    log()->info("...Finished");
+    oi_log()->info("...Finished");
 
     return blockers;
 }
@@ -250,7 +262,7 @@ auto log_best_elements(
             return cmp(xs[a], xs[b]);
         }
     );
-    log()->info("...{}: [{:d}, {:d}, {:d}, ..., {:d}]", 
+    oi_log()->info("...{}: [{:d}, {:d}, {:d}, ..., {:d}]", 
         msg,
         xs[indices[0]], xs[indices[1]], xs[indices[2]], xs[indices[idx]]
     );
@@ -290,7 +302,7 @@ auto remove_bits_w_blockers(
         }
     }
 
-    log()->info("Best bit is {:d} with {:d} rules and {:d} ANY bits", 
+    oi_log()->info("Best bit is {:d} with {:d} rules and {:d} ANY bits", 
         best_bit, result.size(), stats.dontcare[best_bit]);
 
     return {{best_bit}, result};

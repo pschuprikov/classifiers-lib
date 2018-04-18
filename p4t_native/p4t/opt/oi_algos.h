@@ -10,6 +10,10 @@ enum MinMEMode {
     MAX_OI, BLOCKERS
 };
 
+enum OIMode {
+    TOP_DOWN, MIN_DEGREE
+};
+
 struct BitStats {
     explicit BitStats(size_t n) 
         : dontcare(n), zeros(n), ones(n), exact_bits{} {
@@ -28,16 +32,12 @@ auto best_min_similarity_bits(vector<model::Filter> const& filters, size_t l)
     -> vector<int>;
 
 auto best_to_stay_minme(
-    vector<model::Filter> filters, size_t l, MinMEMode mode, bool only_exact) 
-    -> pair<vector<int>, vector<int>>;
+    vector<model::Filter> filters, size_t l, MinMEMode mode, OIMode oi_mode, 
+    bool only_exact) -> pair<vector<int>, vector<int>>;
 
 auto find_maximal_oi_subset(
-    vector<model::Filter> const& filters, model::Filter::BitArray const& mask) 
-    -> vector<int>;
-
-auto find_maximal_oi_subset_indices(
-    vector<model::Filter> const& filters, vector<int> const& indices, 
-    model::Filter::BitArray const& mask) 
+    vector<model::Filter> const& filters, model::Filter::BitArray const& mask,
+    OIMode mode) 
     -> vector<int>;
 
 auto bits_to_mask(vector<int> const& bits) -> model::Filter::BitArray;

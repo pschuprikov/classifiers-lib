@@ -206,8 +206,8 @@ auto const sum_blockers_by_bit(Blockers const& blockers) {
 
 [[maybe_unused]]
 auto apply_dont_care_heuristic(
-        vector<Filter> const& filters, vector<int> const& bits_in_use, 
-        BitStats const& stats, bool only_exact, size_t l) 
+        vector<Filter> filters, vector<int> const& bits_in_use, 
+        BitStats const& stats, bool only_exact, size_t l, OIMode oi_mode) 
     -> tuple<bool, vector<int>, vector<int>> {
 
     log()->info("Using ANY HEURISTIC!");
@@ -238,16 +238,23 @@ auto apply_dont_care_heuristic(
             log()->info("...any heuristinc FAILED, found only {:d} indices", exact_indices.size());
             return make_tuple(false, vector<int>{}, vector<int>{});
         } 
+
+        vector<int> indices(filters.size());
+        iota(begin(indices), end(indices), 0);
+        take_filters_subset(filters, indices, exact_indices);
     
-        auto const oi_indices = find_maximal_oi_subset_indices(filters, exact_indices, cur_mask);
+        take_filters_subset(
+            filters, indices, find_maximal_oi_subset(filters, cur_mask, oi_mode)
+        );
+
         log()->info(
             "...found exact OI indices with {:d}/{:d} bits, exact {:d}, OI {:d}",
             bits_in_use.size() - rm_bits.size(), bits_in_use.size(), 
-            exact_indices.size(), oi_indices.size());
-        return make_tuple(true, rm_bits, oi_indices);
+            exact_indices.size(), indices.size());
+        return make_tuple(true, rm_bits, indices);
     }
 
-    auto const oi_indices = find_maximal_oi_subset(filters, cur_mask);
+    auto const oi_indices = find_maximal_oi_subset(filters, cur_mask, oi_mode);
     log()->info("...checking OI indices with {:d}/{:d} bits, OI {:d}", bits_in_use.size() - rm_bits.size(), bits_in_use.size(), oi_indices.size());
     return make_tuple(true, rm_bits, oi_indices);
 }
@@ -310,21 +317,96 @@ auto remove_bits_w_blockers(
 
 auto remove_bits_oi(
         vector<Filter> const& filters, vector<int> const& bits_in_use, 
-        BitStats const& stats, bool only_exact) 
+        BitStats const& stats, bool only_exact, OIMode oi_mode) 
     -> pair<vector<int>, vector<int>> {
 
     auto mask = bits_to_mask(bits_in_use);
-    auto best = find_best_bits(bits_in_use, only_exact ? stats.exact_bits : vector<int>{},
-            [&mask, &filters] (auto bit) {
+    auto best = find_best_bits(
+            bits_in_use, 
+            only_exact ? stats.exact_bits : vector<int>{},
+            [&mask, &filters, oi_mode] (auto bit) {
                 auto cur_mask = mask;
                 cur_mask.set(bit, false);
-                return int(find_maximal_oi_subset(filters, cur_mask).size());
+                return int(
+                    find_maximal_oi_subset(filters, cur_mask, oi_mode).size()
+                );
             }, std::greater<>());
 
     mask.set(best.front(), false);
-    return make_pair(best, find_maximal_oi_subset(filters, mask));
+    return make_pair(best, find_maximal_oi_subset(filters, mask, oi_mode));
 }
 
+auto find_maximal_oi_subset_degree(
+        vector<Filter> const& filters, Filter::BitArray const& mask
+        ) -> vector<int> {
+    vector<int> result{};
+
+    vector<int> indices(filters.size());
+    iota(begin(indices), end(indices), 0);
+
+    vector<int> num_edges(filters.size());
+    for (auto i = 0u; i < filters.size(); ++i) {
+        for (auto j = 0u; j < filters.size(); j++) {
+            if (i != j && Filter::intersect(filters[j], filters[i], mask)) {
+                num_edges[i]++;
+            }
+        }
+    }
+
+    while (!indices.empty()) {
+        auto min_idx = *min_element(
+            begin(indices), end(indices),
+            [&num_edges] (auto a, auto b) { 
+                return num_edges[a] < num_edges[b]; 
+            }
+        );
+        result.emplace_back(min_idx);
+
+        vector<int> new_indices{};
+        vector<int> removed_indices{};
+        std::partition_copy(
+            begin(indices), end(indices),
+            back_inserter(removed_indices), back_inserter(new_indices),
+            [&filters,min_idx,mask] (auto i) {
+                return Filter::intersect(filters[i], filters[min_idx], mask);
+            }
+        );
+
+        std::swap(new_indices, indices);
+        __gnu_parallel::for_each(begin(indices), end(indices),
+            [&removed_indices,&filters,&num_edges,mask] (auto i) { 
+                for (auto ri : removed_indices) {
+                    if (Filter::intersect(filters[i], filters[ri], mask)) {
+                        num_edges[i]--;
+                    }
+                }
+            }
+        );
+    }
+
+    return result;
+}
+
+auto find_maximal_oi_subset_top_down(
+        vector<Filter> const& filters, Filter::BitArray const& mask
+        ) -> vector<int> {
+    vector<int> result{};
+
+    for (auto i = 0u; i < filters.size(); i++) {
+        auto intersects = false;
+        for (auto j : result) {
+            if (Filter::intersect(filters[j], filters[i], mask)) {
+                intersects = true;
+                break;
+            }
+        }
+        if (!intersects) {
+            result.emplace_back(i);
+        }
+    }
+
+    return result;
+}
 
 } // namespace
 
@@ -368,8 +450,8 @@ auto p4t::opt::best_min_similarity_bits(vector<Filter> const& filters, size_t l)
 
 
 auto p4t::opt::best_to_stay_minme(
-    vector<Filter> filters, size_t l, MinMEMode mode, bool only_exact) 
-    -> std::pair<vector<int>, vector<int>> {
+        vector<Filter> filters, size_t l, MinMEMode mode, OIMode oi_mode, 
+        bool only_exact) -> std::pair<vector<int>, vector<int>> {
     if (filters.empty()) {
         throw std::invalid_argument(
             "the set of filters must not be empty to run minme"
@@ -389,8 +471,10 @@ auto p4t::opt::best_to_stay_minme(
 
     auto exact_bits_in_use = find_exact(filters, bits_in_use);
 
-    take_filters_subset(filters, indices, 
-            find_maximal_oi_subset(filters, bits_to_mask(bits_in_use)));
+    take_filters_subset(
+        filters, indices, 
+        find_maximal_oi_subset(filters, bits_to_mask(bits_in_use), oi_mode)
+    );
 
     assert(is_oi(filters, bits_in_use));
 
@@ -405,11 +489,13 @@ auto p4t::opt::best_to_stay_minme(
         switch(mode) {
             case MinMEMode::MAX_OI: 
                 tie(rm_bits, oi_indices) = remove_bits_oi(
-                    filters, bits_in_use, stats, only_exact);
+                    filters, bits_in_use, stats, only_exact, oi_mode
+                );
                 break;
             case MinMEMode::BLOCKERS:
                 tie(rm_bits, oi_indices) = remove_bits_w_blockers(
-                    filters, bits_in_use, stats, only_exact, l);
+                    filters, bits_in_use, stats, only_exact, l
+                );
                 break;
         }
 
@@ -432,52 +518,27 @@ auto p4t::opt::best_to_stay_minme(
     return make_pair(bits_in_use, indices);
 }
 
-
 auto p4t::opt::find_maximal_oi_subset(
-    vector<Filter> const& filters, Filter::BitArray const& mask) 
-    -> vector<int> {
+        vector<Filter> const& filters, Filter::BitArray const& mask, 
+        OIMode mode) -> vector<int> {
     log()->info("Looking for a maximal oi subset...");
-    vector<int> result{};
 
-    for (auto i = 0u; i < filters.size(); i++) {
-        auto intersects = false;
-        for (auto j : result) {
-            if (Filter::intersect(filters[j], filters[i], mask)) {
-                intersects = true;
-                break;
-            }
-        }
-        if (!intersects) {
-            result.emplace_back(i);
-        }
+    vector<int> result{};
+    switch (mode) {
+        case OIMode::TOP_DOWN: 
+            result = find_maximal_oi_subset_top_down(filters, mask);
+            break;
+        case OIMode::MIN_DEGREE:
+            result = find_maximal_oi_subset_degree(filters, mask);
+            break;
+        default:
+            abort();
     }
 
     log()->info("...Finished");
     return result;
 }
 
-auto p4t::opt::find_maximal_oi_subset_indices(
-        vector<Filter> const& filters, vector<int> const& indices, 
-        Filter::BitArray const& mask)  -> vector<int> {
-    oi_log()->info("Looking for a maximal oi subset...");
-    vector<int> result{};
-
-    for (auto i : indices) {
-        auto intersects = false;
-        for (auto j : result) {
-            if (Filter::intersect(filters[j], filters[i], mask)) {
-                intersects = true;
-                break;
-            }
-        }
-        if (!intersects) {
-            result.emplace_back(i);
-        }
-    }
-
-    oi_log()->info("...Finished");
-    return result;
-}
 
 auto p4t::opt::calc_bit_stats(vector<Filter> const& filters) -> BitStats {
     if (filters.empty()) {

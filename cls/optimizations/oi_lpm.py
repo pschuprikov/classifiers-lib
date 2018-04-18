@@ -92,7 +92,7 @@ LPMGroupInfo = namedtuple('LPMGroupInfo',
 
 def minimize_oi_lpm(classifier, max_width, algo, max_num_groups, *,
                     max_expanded_bits=None, provide_non_expanded=False,
-                    max_candidate_groups=None):
+                    max_candidate_groups=None, max_oi_algo='top_down'):
     """ Minimizes the number of subclassifiers, which are both LPM and OI.
 
     Args:
@@ -103,6 +103,8 @@ def minimize_oi_lpm(classifier, max_width, algo, max_num_groups, *,
         max_expanded_bits: Maximal allowed number of expanded bits.
         provide_non_expanded: Whether non-expanded versions should be returned.
         max_candidate_groups: The total number of candidate groups
+        max_oi_algo: The algorithm used for maximal OI (Possible values
+            'top_down' and 'min_degree').
 
     Returns:
         Pair of subclassifiers list and classifier with leftover rules. If
@@ -123,7 +125,7 @@ def minimize_oi_lpm(classifier, max_width, algo, max_num_groups, *,
         p4t_native.log(f"OI-LPM has started for group #{len(lpm_groups) + 1}")
 
         oi_bits, oi_indices = p4t_native.best_subgroup(
-            classifier.subset(indices), max_width, False, algo
+            classifier.subset(indices), max_width, False, algo, max_oi_algo
         )
         oi_classifier = classifier.subset(
             indices[i] for i in oi_indices
@@ -204,7 +206,8 @@ def decompose_oi(classifier, max_width, algo, only_exact=False, max_num_groups=N
 
     subclassifiers = []
     while (max_num_groups is None or len(subclassifiers) < max_num_groups) and len(classifier) > 0:
-        bits, indices = p4t_native.best_subgroup(classifier, max_width, only_exact, algo)
+        bits, indices = p4t_native.best_subgroup(classifier, max_width,
+                only_exact, algo)
         subclassifiers.append(classifier.subset(indices).reorder(bits))
         classifier = classifier.subset(set(range(len(classifier))) - set(indices))
 
@@ -218,7 +221,8 @@ IncrementalBatchStats = namedtuple(
         ('num_in_groups', 'num_traditional')
     )
 
-def test_incremental(classifier, max_width, max_num_groups, max_traditional):
+def test_incremental(classifier, max_width, max_num_groups, max_traditional, *,
+                     algo='icnp_blockers', max_oi_algo='min_degree'):
     """ Test incremental updates for a classifier 
 
     Args:
@@ -226,6 +230,9 @@ def test_incremental(classifier, max_width, max_num_groups, max_traditional):
         max_width: Maximal allowed classification width.
         max_num_groups: Maximal allowed number of groups.
         max_traditional: Maximal allowed size of traditional representation.
+        algo: Algorithm to use (Possible values 'icnp_oi', 'incp_blockers', 'min_similarity')
+        max_oi_algo: The algorithm used for maximal OI (Possible values
+            'top_down' and 'min_degree').
     
     Returns:
         A list of Incremental Batch Stats
@@ -248,6 +255,6 @@ def test_incremental(classifier, max_width, max_num_groups, max_traditional):
         if num_added < len(classifier):
             lpm_groups, traditional = minimize_oi_lpm(
                 classifier.subset(range(num_added)), max_width, 
-                'icnp_blockers', max_num_groups)
+                algo, max_num_groups, max_oi_algo=max_oi_algo)
 
     return incremental_stats

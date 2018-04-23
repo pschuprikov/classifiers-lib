@@ -112,8 +112,8 @@ def minimize_oi_lpm(classifier, max_width, algo, max_num_groups, *,
         a list of non-expanded classifiers.
     """
     assert max_expanded_bits is not None or not provide_non_expanded
-    assert (max_candidate_groups is None or 
-            max_num_groups <= max_candidate_groups)
+    assert (max_candidate_groups is None 
+            or max_num_groups <= max_candidate_groups)
 
     if max_candidate_groups is None:
         max_candidate_groups = max_num_groups
@@ -186,9 +186,10 @@ def minimize_oi_lpm(classifier, max_width, algo, max_num_groups, *,
             classifier.subset(rest_indices)
         )
 
+OIGroupInfo = namedtuple('OIGroupInfo', ['classifier', 'indices'])
 
-
-def decompose_oi(classifier, max_width, algo, only_exact=False, max_num_groups=None):
+def decompose_oi(classifier, max_width, algo, max_num_groups, *, 
+        only_exact=False, max_candidate_groups=None, max_oi_algo='top_down'):
     """ Decomposes given classifier into a set of order-independent subclassifiers.
 
     Args:
@@ -197,23 +198,47 @@ def decompose_oi(classifier, max_width, algo, only_exact=False, max_num_groups=N
         algo: Algorithm to use (Possible values 'icnp_oi', 'incp_blockers', 'min_similarity')
         only_exact: Whether only exact bits should be allowed (False by default).
         max_num_groups: Maximal allowed number of subclassifiers.
+        max_candidate_groups: The total number of candidate groups.
+        max_oi_algo: The algorithm used for maximal OI (Possible values
+            'top_down' and 'min_degree').
 
     Returns:
         Pair of subclassifiers list and classifier with leftover rules.
     """
 
-    p4t_native.log("OI decomposition has started: exact={:s}".format(str(only_exact)))
+    assert (max_candidate_groups is None 
+            or max_num_groups <= max_candidate_groups)
+    if max_candidate_groups is None:
+        max_candidate_groups = max_num_groups
 
-    subclassifiers = []
-    while (max_num_groups is None or len(subclassifiers) < max_num_groups) and len(classifier) > 0:
-        bits, indices = p4t_native.best_subgroup(classifier, max_width,
-                only_exact, algo)
-        subclassifiers.append(classifier.subset(indices).reorder(bits))
-        classifier = classifier.subset(set(range(len(classifier))) - set(indices))
+    p4t_native.log(f"OI decomposition has started: exact={only_exact}")
+
+    indices = list(range(len(classifier)))
+    oi_groups = []
+    while len(oi_groups) < max_candidate_groups and len(indices) > 0:
+
+        oi_bits, oi_indices = p4t_native.best_subgroup(classifier.subset(indices), 
+                max_width, only_exact, algo, max_oi_algo)
+
+        current_indices = [indices[i] for i in oi_indices]
+        oi_groups.append(OIGroupInfo(
+            classifier=classifier.subset(oi_indices).reorder(oi_bits),
+            indices=current_indices
+        ))
+        indices = sorted(set(indices) - set(current_indices))
 
     p4t_native.log("OI decomposition has completed")
 
-    return subclassifiers, classifier
+    oi_groups.sort(key=lambda x: len(x.indices), reverse=True)
+    selected_groups = oi_groups[:max_num_groups]
+    rest_indices = sorted(set(range(len(classifier))) - reduce(
+        lambda x, y: x | y,
+        (set(x.indices) for x in selected_groups),
+        set()
+    ))
+
+    return ([x.classifier for x in selected_groups],
+            classifier.subset(rest_indices))
 
 
 IncrementalBatchStats = namedtuple(

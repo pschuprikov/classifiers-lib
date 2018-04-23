@@ -168,11 +168,11 @@ def minimize_oi_lpm(classifier, max_width, algo, max_num_groups, *,
     
     lpm_groups.sort(key = lambda x: len(x.indices), reverse=True)
     selected_groups = lpm_groups[:max_num_groups]
-    rest_indices = set(range(len(classifier))) - reduce(
+    rest_indices = sorted(set(range(len(classifier))) - reduce(
         lambda x, y: x | y,
         (set(x.indices) for x in selected_groups),
         set()
-    )
+    ))
 
     if provide_non_expanded:
         return (

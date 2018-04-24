@@ -3,6 +3,7 @@
 
 #include <p4t/common.h>
 #include <p4t/utils/bit_array.h>
+#include <p4t/utils/hashing_aux.h>
 
 #include <iterator>
 #include <algorithm>
@@ -196,4 +197,17 @@ auto inline Filter::subsums(Filter const& lhs, Filter const& rhs) -> bool {
 
 }
 
+namespace std {
+
+template<>
+struct hash<p4t::model::Filter> {
+    size_t operator()(p4t::model::Filter const& f) const {
+        using namespace p4t::utils::hash;
+        size_t result = std::hash<p4t::model::Filter::BitArray>()(f.mask());
+        hash_combine(result, std::hash<p4t::model::Filter::BitArray>()(f.value()));
+        return result;
+    }
+};
+
+}
 #endif

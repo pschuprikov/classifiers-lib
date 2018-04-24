@@ -364,7 +364,7 @@ auto find_maximal_oi_subset_degree(
         );
         result.emplace_back(min_idx);
 
-        auto rm_it = __gnu_parallel::partition(
+        auto rm_it = std::stable_partition(
             begin(indices), end(indices),
             [&filters,min_idx,mask] (auto i) {
                 return !Filter::intersect(filters[i], filters[min_idx], mask);

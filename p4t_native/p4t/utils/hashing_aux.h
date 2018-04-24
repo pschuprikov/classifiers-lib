@@ -27,9 +27,25 @@ auto hash_tuple(T const& t, std::index_sequence<idxs...> const&) -> size_t {
     return result;
 }
 
+template <class A, class B>
+auto hash_pair(pair<A, B> const& p) -> size_t {
+    std::size_t result = std::hash<A>()(p.first);
+    hash_combine(result, std::hash<B>()(p.second));
+    return result;
+}
+
 template<class... Args> 
 auto hash_tuple(tuple<Args...> const& t) -> size_t {
     return hash_tuple(t, std::make_index_sequence<sizeof...(Args)>());
+}
+
+template <class T>
+auto hash_vector(vector<T> const& v) -> size_t {
+    std::size_t result = 0;
+    for (auto const& e : v) {
+        hash_combine(result, std::hash<T>()(e));
+    }
+    return result;
 }
 
 }

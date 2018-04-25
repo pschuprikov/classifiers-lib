@@ -2,19 +2,25 @@ from setuptools import setup, Extension, find_packages
 
 p4t_native = Extension(
     'p4t_native',
-    ['p4t_native/{:s}'.format(src) for src in [
+    ['p4t_native/p4t/{:s}'.format(src) for src in [
         'common.cpp',
+
+        'opt/chain_algos.cpp',
+        'opt/oi_algos.cpp',
+        'opt/boolean_minimization.cpp',
+        'opt/expansion_algos.cpp',
+        'opt/distribution_algos.cpp',
+        'opt/intersections_opt.cpp',
+        'opt/updates.cpp',
+
+        'utils/python_utils.cpp',
+
         'p4t_native.cpp',
         'p4t_native_ext.cpp',
-        'chain_algos.cpp',
-        'oi_algos.cpp',
-        'expansion_algos.cpp',
-        'boolean_minimization.cpp',
-        'distribution_algos.cpp'
     ]],
-    libraries=['boost_python', 'gomp'],
+    libraries=['boost_python3', 'boost_numpy3', 'gomp'],
     include_dirs=['p4t_native'],
-    extra_compile_args=['-fopenmp', '-std=c++14', '-Wall']
+    extra_compile_args=['-fopenmp', '-std=c++17', '-Wall', '-msse4.1', '-O3']
 )
 
 setup(
